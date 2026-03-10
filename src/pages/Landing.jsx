@@ -42,7 +42,7 @@ function AuthModal({ mode, onClose, onToggle }) {
     setError(""); setSuccess(""); setLoading(true);
     try {
       if (isSignup) {
-        const username = name.trim().toLowerCase().replace(/\s+/g, "_") || "user";
+        const username = (name.trim().split(" ")[0] || "user").toLowerCase().replace(/[^a-z0-9]/g, "");
         const { data, error: e } = await supabase.auth.signUp({
           email, password,
           options: { data: { username, full_name: name } }
@@ -55,10 +55,10 @@ function AuthModal({ mode, onClose, onToggle }) {
             email,
             created_at: new Date().toISOString(),
           });
-          // Save to localStorage for profile page
           localStorage.setItem("nn_profile", JSON.stringify({ username, name }));
+          onClose();
+          navigate("/onboarding");
         }
-        setSuccess("Account created! Check your email to confirm, then sign in.");
       } else {
         const { data, error: e } = await supabase.auth.signInWithPassword({ email, password });
         if (e) throw e;

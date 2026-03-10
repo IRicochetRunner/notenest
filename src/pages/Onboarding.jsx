@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { supabase } from "../supabase";
 import StepArtists from "./StepArtists";
 
 // ── ICONS ───────────────────────────────────────────────────
@@ -171,89 +172,8 @@ function StepTime({ value, onChange }) {
   );
 }
 
-// ── STEP 0: USERNAME ────────────────────────────────────────
-const USERNAME_SUGGESTIONS = [
-  ["RiffLord","StringSlinger","FretWizard","ChordCrusher","SoloSage"],
-  ["NeckBender","PickMaster","TuneHunter","AxeArcher","GroveMaker"],
-  ["FretFire","StringSage","RiffRider","ChordCraft","BendKing"],
-  ["ToneSeeker","PickDrifter","SoloForge","NeckNinja","WhamWarden"],
-];
-function randSuggestions() {
-  const row = USERNAME_SUGGESTIONS[Math.floor(Math.random() * USERNAME_SUGGESTIONS.length)];
-  return row.sort(() => Math.random() - 0.5).slice(0, 4);
-}
-function StepUsername({ value, onChange }) {
-  const [suggestions, setSuggestions] = useState(() => randSuggestions());
-  const [error, setError] = useState("");
-  const validate = (v) => {
-    if (v.length < 3) return "At least 3 characters";
-    if (v.length > 20) return "Max 20 characters";
-    if (!/^[a-zA-Z0-9_]+$/.test(v)) return "Letters, numbers, underscores only";
-    return "";
-  };
-  const handleChange = (v) => {
-    onChange(v);
-    setError(validate(v));
-  };
-  const refresh = () => setSuggestions(randSuggestions());
-  return (
-    <div className="flex flex-col gap-5">
-      {/* Input */}
-      <div>
-        <div className="relative">
-          <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6b7a9e] font-bold text-lg select-none">@</span>
-          <input
-            type="text"
-            value={value || ""}
-            onChange={e => handleChange(e.target.value.replace(/\s/g,""))}
-            placeholder="your_username"
-            maxLength={20}
-            autoFocus
-            className={`w-full pl-9 pr-4 py-3.5 rounded-2xl border-[1.5px] text-[#0d1b3e] font-bold text-lg outline-none transition-all bg-white ${
-              error ? "border-red-400 focus:border-red-500" :
-              value && !error ? "border-green-400 focus:border-green-500 shadow-[0_0_0_3px_rgba(34,197,94,0.1)]" :
-              "border-[#dde4f5] focus:border-[#4a72e8] focus:shadow-[0_0_0_3px_rgba(74,114,232,0.1)]"
-            }`}
-            style={{ fontFamily:"Nunito,sans-serif" }}
-          />
-          {value && !error && (
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-green-500 text-lg">✓</span>
-          )}
-        </div>
-        <div className="flex justify-between mt-1.5 px-1">
-          <span className="text-xs text-red-500 font-semibold">{error}</span>
-          <span className="text-xs text-[#b0baca]">{(value||"").length}/20</span>
-        </div>
-      </div>
-
-      {/* Suggestions */}
-      <div>
-        <div className="flex items-center justify-between mb-2.5">
-          <span className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider">Suggestions</span>
-          <button onClick={refresh} className="text-xs font-bold text-[#4a72e8] bg-transparent border-none cursor-pointer hover:text-[#1a3a8f] transition-colors flex items-center gap-1">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="w-3 h-3"><path d="M1 4v6h6"/><path d="M23 20v-6h-6"/><path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/></svg>
-            Refresh
-          </button>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {suggestions.map(s => (
-            <button key={s} onClick={() => handleChange(s)}
-              className={`px-4 py-2.5 rounded-xl border-[1.5px] text-sm font-bold text-left transition-all cursor-pointer ${
-                value === s
-                  ? "border-[#1a3a8f] bg-[#e8eeff] text-[#1a3a8f]"
-                  : "border-[#dde4f5] bg-white text-[#0d1b3e] hover:border-[#4a72e8] hover:bg-[#f0f4ff]"
-              }`} style={{ fontFamily:"Nunito,sans-serif" }}>
-              @{s}
-            </button>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 // ── BUILDING SCREEN ─────────────────────────────────────────
-function BuildingScreen() {
+function BuildingScreen({ answers }) {
   const navigate = useNavigate();
   const [step, setStep] = useState(0);
 
@@ -267,7 +187,26 @@ function BuildingScreen() {
     const timers = buildSteps.map((_, i) =>
       setTimeout(() => setStep(i + 1), (i + 1) * 1200)
     );
-    const done = setTimeout(() => navigate("/dashboard"), 4200);
+    const done = setTimeout(async () => {
+      // Save onboarding answers to Supabase profile
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const stored = JSON.parse(localStorage.getItem("nn_profile") || "{}");
+        await supabase.from("profiles").update({
+          instrument: answers.instrument,
+          level: answers.level,
+          genres: answers.genres,
+          practice_time: answers.time,
+        }).eq("id", session.user.id);
+        localStorage.setItem("nn_profile", JSON.stringify({
+          ...stored,
+          instrument: answers.instrument,
+          level: answers.level,
+          genres: answers.genres,
+        }));
+      }
+      navigate("/dashboard");
+    }, 4200);
     return () => { timers.forEach(clearTimeout); clearTimeout(done); };
   });
 
@@ -325,12 +264,11 @@ function BuildingScreen() {
 
 // ── STEP CONFIG ─────────────────────────────────────────────
 const STEPS = [
-  { label: "Step 1 of 6", title: "First, pick your username",              sub: "This is how other players will know you on NoteNest. You can change it any time." },
-  { label: "Step 2 of 6", title: "What do you play?",                      sub: "NoteNest works for both guitar and bass players at every level." },
-  { label: "Step 3 of 6", title: "How would you describe your playing?",   sub: "Be honest — this helps us recommend the right songs for where you actually are." },
-  { label: "Step 4 of 6", title: "What music do you love?",                sub: "Pick as many as you like. This shapes every song recommendation you get." },
-  { label: "Step 5 of 6", title: "Who are your favorite artists?",         sub: "Type a name and press Enter. Add up to 5 — the more you add the better your recommendations." },
-  { label: "Step 6 of 6", title: "How much time can you practice?",        sub: "We'll pace your recommendations around your schedule. You can always change this later." },
+  { label: "Step 1 of 5", title: "What do you play?",                      sub: "NoteNest works for both guitar and bass players at every level." },
+  { label: "Step 2 of 5", title: "How would you describe your playing?",   sub: "Be honest — this helps us recommend the right songs for where you actually are." },
+  { label: "Step 3 of 5", title: "What music do you love?",                sub: "Pick as many as you like. This shapes every song recommendation you get." },
+  { label: "Step 4 of 5", title: "Who are your favorite artists?",         sub: "Type a name and press Enter. Add up to 5 — the more you add the better your recommendations." },
+  { label: "Step 5 of 5", title: "How much time can you practice?",        sub: "We'll pace your recommendations around your schedule. You can always change this later." },
 ];
 
 // ── MAIN COMPONENT ──────────────────────────────────────────
@@ -339,7 +277,6 @@ export default function Onboarding() {
   const [cur, setCur] = useState(0);
   const [building, setBuilding] = useState(false);
   const [answers, setAnswers] = useState({
-    username: "",
     instrument: null,
     level: null,
     genres: [],
@@ -350,39 +287,24 @@ export default function Onboarding() {
   const update = (key, val) => setAnswers((a) => ({ ...a, [key]: val }));
 
   const canContinue = () => {
-    if (cur === 0) return answers.username && answers.username.length >= 3 && /^[a-zA-Z0-9_]+$/.test(answers.username);
-    if (cur === 1) return !!answers.instrument;
-    if (cur === 2) return !!answers.level;
-    if (cur === 3) return answers.genres.length > 0;
-    if (cur === 4) return true;
-    if (cur === 5) return !!answers.time;
+    if (cur === 0) return !!answers.instrument;
+    if (cur === 1) return !!answers.level;
+    if (cur === 2) return answers.genres.length > 0;
+    if (cur === 3) return true;
+    if (cur === 4) return !!answers.time;
     return false;
   };
 
   const next = () => {
-    if (cur < STEPS.length - 1) {
-      setCur((c) => c + 1);
-    } else {
-      // Persist profile so Dashboard can read it
-      try {
-        localStorage.setItem("nn_profile", JSON.stringify({
-          username: answers.username,
-          instrument: answers.instrument,
-          level: answers.level,
-          genres: answers.genres,
-          artists: answers.artists,
-          time: answers.time,
-        }));
-      } catch {}
-      setBuilding(true);
-    }
+    if (cur < STEPS.length - 1) setCur((c) => c + 1);
+    else setBuilding(true);
   };
 
   const back = () => { if (cur > 0) setCur((c) => c - 1); };
 
   const progress = ((cur + 1) / STEPS.length) * 100;
 
-  if (building) return <BuildingScreen />;
+  if (building) return <BuildingScreen answers={answers} />;
 
   return (
     <div className="min-h-screen bg-[#f0f4ff] flex flex-col" style={{ fontFamily: "Plus Jakarta Sans, sans-serif" }}>
@@ -442,12 +364,11 @@ export default function Onboarding() {
             <p className="text-sm text-[#6b7a9e] mb-7 leading-relaxed">{STEPS[cur].sub}</p>
 
             <div key={cur}>
-              {cur === 0 && <StepUsername   value={answers.username}   onChange={(v) => update("username", v)} />}
-              {cur === 1 && <StepInstrument value={answers.instrument} onChange={(v) => update("instrument", v)} />}
-              {cur === 2 && <StepLevel      value={answers.level}      onChange={(v) => update("level", v)} />}
-              {cur === 3 && <StepGenres     value={answers.genres}     onChange={(v) => update("genres", v)} />}
-              {cur === 4 && <StepArtists    value={answers.artists}    onChange={(v) => update("artists", v)} />}
-              {cur === 5 && <StepTime       value={answers.time}       onChange={(v) => update("time", v)} />}
+              {cur === 0 && <StepInstrument value={answers.instrument} onChange={(v) => update("instrument", v)} />}
+              {cur === 1 && <StepLevel      value={answers.level}      onChange={(v) => update("level", v)} />}
+              {cur === 2 && <StepGenres     value={answers.genres}     onChange={(v) => update("genres", v)} />}
+              {cur === 3 && <StepArtists    value={answers.artists}    onChange={(v) => update("artists", v)} />}
+              {cur === 4 && <StepTime       value={answers.time}       onChange={(v) => update("time", v)} />}
             </div>
           </div>
 
