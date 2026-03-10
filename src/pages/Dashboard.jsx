@@ -95,7 +95,7 @@ function useAlbumArt(query) {
     // Use iTunes search with a small delay to avoid rate limiting
     const timer = setTimeout(() => {
       fetch(
-        `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=3&media=music`
+        `/api/itunes?term=${encodeURIComponent(query)}&limit=3`
       )
         .then((r) => r.json())
         .then((d) => {
@@ -407,54 +407,91 @@ function SongGridCard({ song, onClick, onStructureClick }) {
 
 // ── SONG ROW (LIST VIEW) ─────────────────────────────────────
 function SongRow({ song, onClick, onStructureClick }) {
+  const keyColor = {
+    "A":"bg-red-100 text-red-700","A#":"bg-orange-100 text-orange-700","Bb":"bg-orange-100 text-orange-700",
+    "B":"bg-amber-100 text-amber-700","C":"bg-yellow-100 text-yellow-700","C#":"bg-lime-100 text-lime-700",
+    "Db":"bg-lime-100 text-lime-700","D":"bg-green-100 text-green-700","D#":"bg-teal-100 text-teal-700",
+    "Eb":"bg-teal-100 text-teal-700","E":"bg-cyan-100 text-cyan-700","F":"bg-blue-100 text-blue-700",
+    "F#":"bg-indigo-100 text-indigo-700","Gb":"bg-indigo-100 text-indigo-700","G":"bg-violet-100 text-violet-700",
+    "G#":"bg-purple-100 text-purple-700","Ab":"bg-purple-100 text-purple-700",
+  };
+  const kc = song.key ? (keyColor[song.key.replace(/m$/,"")] || "bg-[#e8eeff] text-[#1a3a8f]") : null;
+
   return (
-    <div className="flex items-center gap-5 px-4 py-4 rounded-2xl hover:bg-[#f0f4ff] transition-colors cursor-pointer group border border-transparent hover:border-[#dde4f5]">
-      {/* Album art - bigger */}
-      <div onClick={() => onClick(song)} className="w-16 h-16 rounded-2xl overflow-hidden bg-[#e8eeff] flex-shrink-0 shadow-md">
+    <div className="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-[#f0f4ff] transition-colors cursor-pointer group border border-transparent hover:border-[#dde4f5]">
+      {/* Album art */}
+      <div onClick={() => onClick(song)} className="w-14 h-14 rounded-2xl overflow-hidden bg-[#e8eeff] flex-shrink-0 shadow-md">
         <AlbumArt song={song} className="w-full h-full object-cover" fallbackClassName="w-full h-full" />
       </div>
 
       {/* Title + artist */}
-      <div onClick={() => onClick(song)} className="flex-1 min-w-0">
-        <div className="font-black text-base text-[#0d1b3e] truncate mb-0.5" style={{ fontFamily:"Nunito,sans-serif" }}>{song.title}</div>
-        <div className="text-sm text-[#6b7a9e] truncate">{song.artist}</div>
-        {/* Skills inline on mobile */}
-        <div className="flex sm:hidden flex-wrap gap-1 mt-1.5">
-          {song.skills.slice(0,2).map((s) => <span key={s} className="text-[10px] font-bold bg-[#e8eeff] text-[#1a3a8f] px-2 py-0.5 rounded-full">{s}</span>)}
-        </div>
+      <div onClick={() => onClick(song)} className="w-44 flex-shrink-0 min-w-0">
+        <div className="font-black text-sm text-[#0d1b3e] truncate mb-0.5" style={{ fontFamily:"Nunito,sans-serif" }}>{song.title}</div>
+        <div className="text-xs text-[#6b7a9e] truncate">{song.artist}</div>
       </div>
 
       {/* Skills */}
-      <div onClick={() => onClick(song)} className="hidden sm:flex flex-wrap gap-1.5 w-44 flex-shrink-0">
-        {song.skills.map((s) => <span key={s} className="text-[11px] font-bold bg-[#e8eeff] text-[#1a3a8f] px-2.5 py-1 rounded-full">{s}</span>)}
+      <div onClick={() => onClick(song)} className="hidden sm:flex flex-wrap gap-1 w-36 flex-shrink-0">
+        {song.skills.slice(0,2).map((s) => <span key={s} className="text-[10px] font-bold bg-[#e8eeff] text-[#1a3a8f] px-2 py-0.5 rounded-full">{s}</span>)}
+        {song.skills.length > 2 && <span className="text-[10px] font-bold text-[#6b7a9e]">+{song.skills.length - 2}</span>}
       </div>
 
-      {/* Parts bar */}
-      <div onClick={() => onClick(song)} className="hidden lg:flex flex-col gap-1.5 flex-shrink-0 w-36">
-        <PartsBar song={song} />
-        <div className="text-[11px] text-[#6b7a9e] font-medium">
-          {(song.parts||[]).filter(p => typeof p === 'string' ? true : p.mastery >= 60).length} parts learned
+      {/* Key */}
+      <div onClick={() => onClick(song)} className="hidden lg:flex w-16 flex-shrink-0 justify-center">
+        {song.key
+          ? <span className={"text-xs font-black px-2.5 py-1 rounded-lg " + kc}>{song.key}</span>
+          : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
+      </div>
+
+      {/* BPM */}
+      <div onClick={() => onClick(song)} className="hidden lg:flex w-16 flex-shrink-0 justify-center">
+        {song.bpm
+          ? <span className="text-xs font-bold text-[#0d1b3e]">{song.bpm} <span className="text-[#6b7a9e] font-medium">bpm</span></span>
+          : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
+      </div>
+
+      {/* Tuning + Capo */}
+      <div onClick={() => onClick(song)} className="hidden xl:flex flex-col gap-0.5 w-28 flex-shrink-0">
+        {song.tuning
+          ? <span className="text-xs font-bold text-[#0d1b3e]">{song.tuning}</span>
+          : <span className="text-xs text-[#dde4f5]">Standard</span>}
+        {song.capo > 0
+          ? <span className="text-[10px] text-[#6b7a9e] font-medium">Capo {song.capo}</span>
+          : <span className="text-[10px] text-[#dde4f5]">No capo</span>}
+      </div>
+
+      {/* Genre */}
+      <div onClick={() => onClick(song)} className="hidden xl:block w-24 flex-shrink-0">
+        {song.genre
+          ? <span className="text-xs font-bold bg-[#f0f4ff] text-[#6b7a9e] px-2.5 py-1 rounded-full">{song.genre}</span>
+          : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
+      </div>
+
+      {/* Duration */}
+      <div onClick={() => onClick(song)} className="hidden xl:block w-16 flex-shrink-0 text-center">
+        {song.duration
+          ? <span className="text-xs font-bold text-[#0d1b3e]">{Math.floor(song.duration)}:{String(Math.round((song.duration%1)*60)).padStart(2,"0")}</span>
+          : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
+      </div>
+
+      {/* Progress */}
+      <div onClick={() => onClick(song)} className="w-24 flex-shrink-0 hidden md:block">
+        <div className="flex justify-between text-[10px] font-semibold text-[#6b7a9e] mb-1">
+          <span className="font-bold text-[#0d1b3e]">{song.progress}%</span>
+          {song.progress === 100 && <span className="text-green-600 font-bold">✓</span>}
+        </div>
+        <div className="h-1.5 bg-[#e8eeff] rounded-full overflow-hidden">
+          <div className={"h-full rounded-full transition-all "+(song.progress===100?"bg-green-500":"bg-gradient-to-r from-[#1a3a8f] to-[#4a72e8]")} style={{ width:song.progress+"%" }} />
         </div>
       </div>
 
       {/* Stars */}
       <div onClick={() => onClick(song)} className="flex items-center gap-0.5 flex-shrink-0">
-        {[1,2,3,4,5].map((n) => <StarIcon key={n} className={"w-4 h-4 "+(n<=song.rating?"text-amber-400":"text-[#dde4f5]")} filled={n<=song.rating} />)}
+        {[1,2,3,4,5].map((n) => <StarIcon key={n} className={"w-3.5 h-3.5 "+(n<=song.rating?"text-amber-400":"text-[#dde4f5]")} filled={n<=song.rating} />)}
       </div>
 
-      {/* Progress */}
-      <div onClick={() => onClick(song)} className="w-28 flex-shrink-0 hidden md:block">
-        <div className="flex justify-between text-[11px] font-semibold text-[#6b7a9e] mb-1.5">
-          <span className="font-bold text-[#0d1b3e]">{song.progress}%</span>
-          {song.progress === 100 && <span className="text-green-600 font-bold">Nailed it ✓</span>}
-        </div>
-        <div className="h-2 bg-[#e8eeff] rounded-full overflow-hidden">
-          <div className={"h-full rounded-full transition-all "+(song.progress===100?"bg-green-500":"bg-gradient-to-r from-[#1a3a8f] to-[#4a72e8]")} style={{ width:song.progress+"%" }} />
-        </div>
-      </div>
-
-      {/* Date */}
-      <div onClick={() => onClick(song)} className="text-sm text-[#6b7a9e] flex-shrink-0 hidden lg:block w-16 text-right font-medium">{song.date}</div>
+      {/* Date added */}
+      <div onClick={() => onClick(song)} className="text-xs text-[#6b7a9e] flex-shrink-0 hidden lg:block w-14 text-right font-medium">{song.date}</div>
 
       {/* Structure button */}
       <button
@@ -782,7 +819,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) loadSongs(session.user.id);
-      else { setSongs(INIT_SONGS); setLoadingSongs(false); }
+      else { window.location.href = "/"; }
     });
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -807,8 +844,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
 
   async function handleSignOut() {
     await supabase.auth.signOut();
-    setUser(null);
-    setSongs(INIT_SONGS);
+    window.location.href = "/";
   }
 
   // Profile — pulled from Supabase user or localStorage fallback
@@ -1021,15 +1057,19 @@ export default function Dashboard({ darkMode, setDarkMode }) {
               </div>
             ) : (
               <div className="bg-white rounded-3xl border border-[#dde4f5] p-3 shadow-sm">
-                <div className="flex items-center gap-5 px-4 pb-3 mb-1 border-b border-[#dde4f5] text-xs font-bold text-[#6b7a9e] uppercase tracking-wider">
-                  <div className="w-16 flex-shrink-0" />
-                  <div className="flex-1">Song</div>
-                  <div className="hidden sm:block w-44">Skills</div>
-                  <div className="hidden lg:block w-36">Parts</div>
-                  <div className="flex-shrink-0 w-24">Rating</div>
-                  <div className="hidden md:block w-28">Progress</div>
-                  <div className="hidden lg:block w-16 text-right">Added</div>
-                  <div className="w-24" />
+                <div className="flex items-center gap-4 px-4 pb-3 mb-1 border-b border-[#dde4f5] text-[10px] font-bold text-[#6b7a9e] uppercase tracking-wider">
+                  <div className="w-14 flex-shrink-0" />
+                  <div className="w-44 flex-shrink-0">Song</div>
+                  <div className="hidden sm:block w-36 flex-shrink-0">Skills</div>
+                  <div className="hidden lg:block w-16 flex-shrink-0 text-center">Key</div>
+                  <div className="hidden lg:block w-16 flex-shrink-0 text-center">BPM</div>
+                  <div className="hidden xl:block w-28 flex-shrink-0">Tuning / Capo</div>
+                  <div className="hidden xl:block w-24 flex-shrink-0">Genre</div>
+                  <div className="hidden xl:block w-16 flex-shrink-0 text-center">Length</div>
+                  <div className="hidden md:block w-24 flex-shrink-0">Progress</div>
+                  <div className="flex-shrink-0 w-24 text-center">Rating</div>
+                  <div className="hidden lg:block w-14 flex-shrink-0 text-right">Added</div>
+                  <div className="w-24 flex-shrink-0" />
                 </div>
                 {filteredSongs.map((s) => (
                   <SongRow key={s.id} song={s} onClick={setSelected} onStructureClick={setStructureSong} />

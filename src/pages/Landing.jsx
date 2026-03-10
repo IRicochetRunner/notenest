@@ -148,7 +148,7 @@ function SongRowPreview({ name, artist, skills, status, artRef }) {
   const [art, setArt] = useState(null);
   useEffect(() => {
     if (!artRef) return;
-    fetch("https://itunes.apple.com/search?term=" + encodeURIComponent(artRef) + "&entity=song&limit=1")
+    fetch("/api/itunes?term=" + encodeURIComponent(artRef) + "&limit=1")
       .then(r => r.json()).then(d => { if (d.results?.[0]) setArt(d.results[0].artworkUrl100.replace("100x100bb","200x200bb")); }).catch(()=>{});
   }, [artRef]);
   return (

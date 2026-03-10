@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 
 // ── ICONS ────────────────────────────────────────────────────
 function MusicIcon({ className }) {
@@ -54,7 +54,7 @@ function totalDuration(songs) {
 function AlbumThumb({ title, artist }) {
   const [art, setArt] = useState(null);
   useState(() => {
-    fetch("https://itunes.apple.com/search?term=" + encodeURIComponent(title + " " + artist) + "&entity=song&limit=1")
+    fetch("/api/itunes?term=" + encodeURIComponent(title + " " + artist) + "&limit=1")
       .then(r => r.json()).then(d => { if (d.results?.[0]) setArt(d.results[0].artworkUrl100.replace("100x100bb","200x200bb")); }).catch(()=>{});
   });
   return (
@@ -149,32 +149,130 @@ function SetlistSongRow({ song, index, total, onRemove, onMoveUp, onMoveDown, on
 // ── SONG PICKER MODAL ────────────────────────────────────────
 function SongPickerModal({ songs, existingIds, onAdd, onClose, dark }) {
   const [search, setSearch] = useState("");
-  const filtered = songs.filter(s => !existingIds.includes(s.id) && (s.title.toLowerCase().includes(search.toLowerCase()) || s.artist.toLowerCase().includes(search.toLowerCase())));
+  const [libraryOnly, setLibraryOnly] = useState(false);
+  const [itunesResults, setItunesResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+
+  // Debounced iTunes search
+  useEffect(() => {
+    if (libraryOnly || search.trim().length < 2) { setItunesResults([]); return; }
+    const timer = setTimeout(async () => {
+      setSearching(true);
+      try {
+        const res = await fetch(`/api/itunes?term=${encodeURIComponent(search)}&limit=8`);
+        const data = await res.json();
+        setItunesResults(data.results || []);
+      } catch(e) { setItunesResults([]); }
+      setSearching(false);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search, libraryOnly]);
+
+  const libraryFiltered = songs.filter(s =>
+    !existingIds.includes(s.id) &&
+    (s.title.toLowerCase().includes(search.toLowerCase()) || s.artist.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const handleAddItunes = (track) => {
+    // Check if already in library
+    const existing = songs.find(s =>
+      s.title.toLowerCase() === track.trackName?.toLowerCase() &&
+      s.artist.toLowerCase() === track.artistName?.toLowerCase()
+    );
+    if (existing) { onAdd(existing); return; }
+    onAdd({
+      id: Date.now(),
+      title: track.trackName,
+      artist: track.artistName,
+      skills: [],
+      rating: 0,
+      progress: 0,
+      _custom: true,
+      _art: track.artworkUrl100?.replace("100x100bb", "400x400bb"),
+    });
+  };
+
+  const inputCls = "w-full px-4 py-2.5 border-[1.5px] rounded-xl text-sm outline-none " +
+    (dark ? "bg-white/10 border-white/20 text-white placeholder:text-white/30 focus:border-white/40" : "bg-[#f0f4ff] border-[#dde4f5] text-[#0d1b3e] focus:border-[#1a3a8f]");
+
+  const results = libraryOnly ? libraryFiltered : (search.trim().length >= 2 ? itunesResults : libraryFiltered);
+  const emptyMsg = libraryOnly
+    ? "No matching songs in your library"
+    : search.trim().length < 2
+      ? "Start typing to search any song..."
+      : searching ? "Searching..." : "No results found";
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d1b3e]/60 backdrop-blur-md p-4" onClick={e => e.target===e.currentTarget && onClose()}>
       <div className={"rounded-3xl w-full max-w-md shadow-2xl overflow-hidden " + (dark ? "bg-[#0d1b3e] border border-white/10" : "bg-white")}>
         <div className={"p-5 border-b " + (dark ? "border-white/10" : "border-[#dde4f5]")}>
           <div className="flex items-center justify-between mb-4">
             <h3 className={"font-black text-lg " + (dark ? "text-white" : "text-[#0d1b3e]")} style={{fontFamily:"Nunito, sans-serif"}}>Add song to setlist</h3>
-            <button onClick={onClose} className={"w-8 h-8 rounded-full flex items-center justify-center border-none cursor-pointer text-sm " + (dark ? "bg-white/10 text-white/60" : "bg-[#f0f4ff] text-[#6b7a9e]")}>x</button>
+            <button onClick={onClose} className={"w-8 h-8 rounded-full flex items-center justify-center border-none cursor-pointer text-sm " + (dark ? "bg-white/10 text-white/60" : "bg-[#f0f4ff] text-[#6b7a9e]")}>✕</button>
           </div>
-          <input type="text" value={search} onChange={e => setSearch(e.target.value)} placeholder="Search your library..." autoFocus
-            className={"w-full px-4 py-2.5 border-[1.5px] rounded-xl text-sm outline-none " + (dark ? "bg-white/10 border-white/20 text-white placeholder:text-white/30" : "bg-[#f0f4ff] border-[#dde4f5] text-[#0d1b3e]")}
-            style={{fontFamily:"Plus Jakarta Sans, sans-serif"}} />
+          <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search any song or artist..."
+            autoFocus className={inputCls} style={{fontFamily:"Plus Jakarta Sans, sans-serif"}} />
+          {/* Library only toggle */}
+          <button onClick={() => setLibraryOnly(v => !v)}
+            className={"flex items-center gap-2 mt-3 text-xs font-bold border-none cursor-pointer bg-transparent " + (dark ? "text-white/50 hover:text-white/70" : "text-[#6b7a9e] hover:text-[#1a3a8f]")}>
+            <div className={"w-4 h-4 rounded border-2 flex items-center justify-center transition-all flex-shrink-0 " +
+              (libraryOnly ? "bg-[#1a3a8f] border-[#1a3a8f]" : (dark ? "border-white/30" : "border-[#dde4f5]"))}>
+              {libraryOnly && <CheckIcon className="w-2.5 h-2.5 text-white" />}
+            </div>
+            Only show songs already in my library
+          </button>
         </div>
-        <div className="overflow-y-auto max-h-80 p-3 flex flex-col gap-1">
-          {filtered.length===0 && <div className={"text-sm text-center py-8 " + (dark ? "text-white/40" : "text-[#6b7a9e]")}>No songs to add</div>}
-          {filtered.map(s => (
-            <button key={s.id} onClick={() => onAdd(s)}
-              className={"flex items-center gap-3 p-3 rounded-xl text-left w-full border-none cursor-pointer transition-all " + (dark ? "bg-transparent hover:bg-white/10" : "bg-transparent hover:bg-[#f0f4ff]")}>
-              <AlbumThumb title={s.title} artist={s.artist} />
-              <div className="flex-1 min-w-0">
-                <div className={"font-bold text-sm truncate " + (dark ? "text-white" : "text-[#0d1b3e]")}>{s.title}</div>
-                <div className={"text-xs " + (dark ? "text-white/50" : "text-[#6b7a9e]")}>{s.artist}</div>
-              </div>
-              <PlusIcon className={"w-4 h-4 flex-shrink-0 " + (dark ? "text-white/40" : "text-[#6b7a9e]")} />
-            </button>
-          ))}
+
+        <div className="overflow-y-auto max-h-72 p-3 flex flex-col gap-1">
+          {results.length === 0 ? (
+            <div className={"text-sm text-center py-8 " + (dark ? "text-white/40" : "text-[#6b7a9e]")}>
+              {searching ? (
+                <div className="flex items-center justify-center gap-2">
+                  <div className="w-4 h-4 border-2 border-[#1a3a8f] border-t-transparent rounded-full animate-spin"/>
+                  Searching...
+                </div>
+              ) : emptyMsg}
+            </div>
+          ) : libraryOnly ? (
+            // Library results
+            results.map(s => (
+              <button key={s.id} onClick={() => onAdd(s)}
+                className={"flex items-center gap-3 p-3 rounded-xl text-left w-full border-none cursor-pointer transition-all " + (dark ? "bg-transparent hover:bg-white/10" : "bg-transparent hover:bg-[#f0f4ff]")}>
+                <AlbumThumb title={s.title} artist={s.artist} />
+                <div className="flex-1 min-w-0">
+                  <div className={"font-bold text-sm truncate " + (dark ? "text-white" : "text-[#0d1b3e]")}>{s.title}</div>
+                  <div className={"text-xs " + (dark ? "text-white/50" : "text-[#6b7a9e]")}>{s.artist}</div>
+                </div>
+                <div className={"text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 " + (dark ? "bg-white/10 text-white/40" : "bg-[#e8eeff] text-[#1a3a8f]")}>In library</div>
+              </button>
+            ))
+          ) : (
+            // iTunes results
+            results.map((track, i) => {
+              const inLibrary = songs.some(s =>
+                s.title.toLowerCase() === track.trackName?.toLowerCase() &&
+                s.artist.toLowerCase() === track.artistName?.toLowerCase()
+              );
+              const art = track.artworkUrl100?.replace("100x100bb", "200x200bb");
+              return (
+                <button key={i} onClick={() => handleAddItunes(track)}
+                  className={"flex items-center gap-3 p-3 rounded-xl text-left w-full border-none cursor-pointer transition-all " + (dark ? "bg-transparent hover:bg-white/10" : "bg-transparent hover:bg-[#f0f4ff]")}>
+                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-[#e8eeff] flex-shrink-0">
+                    {art ? <img src={art} alt={track.trackName} className="w-full h-full object-cover"/> : <MusicIcon className="w-4 h-4 text-[#1a3a8f]/30 m-3"/>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className={"font-bold text-sm truncate " + (dark ? "text-white" : "text-[#0d1b3e]")}>{track.trackName}</div>
+                    <div className={"text-xs truncate " + (dark ? "text-white/50" : "text-[#6b7a9e]")}>{track.artistName} · {track.collectionName}</div>
+                  </div>
+                  {inLibrary
+                    ? <div className={"text-xs font-bold px-2 py-1 rounded-full flex-shrink-0 " + (dark ? "bg-white/10 text-white/40" : "bg-[#e8eeff] text-[#1a3a8f]")}>In library</div>
+                    : <PlusIcon className={"w-4 h-4 flex-shrink-0 " + (dark ? "text-white/30" : "text-[#6b7a9e]")} />
+                  }
+                </button>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
@@ -242,7 +340,7 @@ function SetlistPanel({ setlist, allSongs, onUpdate, onDelete, dark }) {
     setShowPicker(false);
     let duration = null;
     try {
-      const res = await fetch("https://itunes.apple.com/search?term=" + encodeURIComponent(song.title + " " + song.artist) + "&entity=song&limit=1");
+      const res = await fetch("/api/itunes?term=" + encodeURIComponent(song.title + " " + song.artist) + "&limit=1");
       const data = await res.json();
       if (data.results?.[0]?.trackTimeMillis) {
         duration = parseFloat((data.results[0].trackTimeMillis / 60000).toFixed(2));
@@ -355,13 +453,33 @@ function SetlistPanel({ setlist, allSongs, onUpdate, onDelete, dark }) {
   );
 }
 
+// ── GIG ART THUMBNAIL (for card collage) ─────────────────────
+function GigArtThumb({ title, artist, art: preloadedArt }) {
+  const [art, setArt] = useState(preloadedArt || null);
+  useEffect(() => {
+    if (art || !title) return;
+    fetch(`/api/itunes?term=${encodeURIComponent(title + " " + artist)}&limit=1`)
+      .then(r => r.json())
+      .then(d => { if (d.results?.[0]?.artworkUrl100) setArt(d.results[0].artworkUrl100.replace("100x100bb","300x300bb")); })
+      .catch(() => {});
+  }, [title, artist]);
+  return art
+    ? <img src={art} alt={title} className="w-full h-full object-cover" />
+    : <div className="w-full h-full bg-gradient-to-br from-[#1a3a8f] to-[#4a72e8]" />;
+}
+
 // ── MAIN EXPORT ───────────────────────────────────────────────
 export default function SetlistBuilder({ songs, dark }) {
-  const [gigs, setGigs] = useState([
-    { id: 1, name: "Open Mic Night", venue: "The Rusty Nail", date: "2026-04-15", notes: "45 min set", setlists: [{ id: 101, name: "Main Set", songs: [] }] }
-  ]);
-  const [activeGigId, setActiveGigId] = useState(1);
-  const [activeSetlistId, setActiveSetlistId] = useState(101);
+  const [gigs, setGigs] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("nn_gigs") || "[]"); } catch(e) { return []; }
+  });
+  const [activeGigId, setActiveGigId] = useState(null);
+  const [activeSetlistId, setActiveSetlistId] = useState(null);
+
+  // Save gigs to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("nn_gigs", JSON.stringify(gigs));
+  }, [gigs]);
   const [showGigModal, setShowGigModal] = useState(false);
   const [editingGig, setEditingGig] = useState(null);
   const [view, setView] = useState("gigs"); // "gigs" | "setlist"
@@ -450,41 +568,107 @@ export default function SetlistBuilder({ songs, dark }) {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {gigs.map(gig => {
-            const totalSongs = gig.setlists.reduce((a, s) => a + s.songs.length, 0);
-            const hasDur = gig.setlists.some(sl => sl.songs.some(s => s.duration));
-            const dur = hasDur ? totalDuration(gig.setlists.flatMap(sl => sl.songs)) : null;
+            const allSongs = gig.setlists.flatMap(sl => sl.songs);
+            const totalSongs = allSongs.length;
+            const hasDur = allSongs.some(s => s.duration);
+            const dur = hasDur ? totalDuration(allSongs) : null;
             const isUpcoming = gig.date && new Date(gig.date) >= new Date();
+            const isPast = gig.date && new Date(gig.date) < new Date();
+            // Get up to 4 unique songs for art collage
+            const artSongs = allSongs.slice(0, 4);
+            const dateStr = gig.date
+              ? new Date(gig.date + "T00:00:00").toLocaleDateString("en-US", {weekday:"short", month:"short", day:"numeric"})
+              : null;
+
             return (
-              <div key={gig.id} className={"rounded-2xl border p-5 transition-all hover:-translate-y-1 hover:shadow-lg cursor-pointer " + cardBg} onClick={() => openGig(gig)}>
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex-1 min-w-0">
-                    <div className={"font-black text-lg leading-tight mb-0.5 " + text} style={{fontFamily:"Nunito, sans-serif"}}>{gig.name}</div>
-                    {gig.venue && <div className={"text-xs flex items-center gap-1 " + muted}><MapPinIcon className="w-3 h-3"/>{gig.venue}</div>}
+              <div key={gig.id}
+                onClick={() => openGig(gig)}
+                className={"group rounded-3xl overflow-hidden cursor-pointer transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_20px_60px_rgba(26,58,143,0.18)] " + (dark ? "bg-white/5 border border-white/10" : "bg-white border border-[#dde4f5] shadow-sm")}>
+
+                {/* Art header */}
+                <div className="relative h-36 overflow-hidden bg-gradient-to-br from-[#1a3a8f] to-[#4a72e8]">
+                  {/* Album art grid */}
+                  {artSongs.length > 0 ? (
+                    <div className={`absolute inset-0 grid ${artSongs.length >= 4 ? "grid-cols-2 grid-rows-2" : artSongs.length === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+                      {artSongs.map((s, i) => (
+                        <GigArtThumb key={i} title={s.title} artist={s.artist} art={s._art} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                      <MusicIcon className="w-16 h-16 text-white" />
+                    </div>
+                  )}
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#0d1b3e]/80 via-[#0d1b3e]/20 to-transparent" />
+
+                  {/* Top badges */}
+                  <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                    {isUpcoming && (
+                      <span className="text-[10px] font-black bg-[#4a72e8] text-white px-2.5 py-1 rounded-full uppercase tracking-wider">
+                        Upcoming
+                      </span>
+                    )}
+                    {isPast && (
+                      <span className="text-[10px] font-black bg-black/40 text-white/70 px-2.5 py-1 rounded-full uppercase tracking-wider backdrop-blur-sm">
+                        Past
+                      </span>
+                    )}
+                    {!gig.date && <span />}
+                    {dur && (
+                      <span className="text-[10px] font-bold bg-black/40 text-white/80 px-2.5 py-1 rounded-full flex items-center gap-1 backdrop-blur-sm ml-auto">
+                        <ClockIcon className="w-3 h-3" />{dur}
+                      </span>
+                    )}
                   </div>
-                  {isUpcoming && <span className="text-xs font-bold bg-[#e8eeff] text-[#1a3a8f] px-2.5 py-1 rounded-full flex-shrink-0 ml-2">Upcoming</span>}
+
+                  {/* Bottom: date on the art */}
+                  {dateStr && (
+                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5">
+                      <CalendarIcon className="w-3.5 h-3.5 text-white/70" />
+                      <span className="text-xs font-bold text-white/90">{dateStr}</span>
+                    </div>
+                  )}
                 </div>
-                {gig.date && (
-                  <div className={"text-xs flex items-center gap-1.5 mb-3 " + muted}>
-                    <CalendarIcon className="w-3.5 h-3.5"/>
-                    {new Date(gig.date + "T00:00:00").toLocaleDateString("en-US", {weekday:"short", month:"short", day:"numeric", year:"numeric"})}
+
+                {/* Card body */}
+                <div className="p-4">
+                  <div className="flex items-start justify-between mb-1">
+                    <div className={"font-black text-lg leading-tight " + text} style={{fontFamily:"Nunito, sans-serif"}}>{gig.name}</div>
                   </div>
-                )}
-                <div className={"flex items-center gap-4 text-xs mb-3 " + muted}>
-                  <span>{gig.setlists.length} setlist{gig.setlists.length!==1?"s":""}</span>
-                  <span>{totalSongs} song{totalSongs!==1?"s":""}</span>
-                  {dur && <span className="flex items-center gap-1"><ClockIcon className="w-3 h-3"/>{dur}</span>}
-                </div>
-                {gig.notes && <p className={"text-xs italic line-clamp-2 " + muted}>"{gig.notes}"</p>}
-                <div className="flex items-center justify-between mt-4 pt-3 border-t" style={{borderColor: dark ? "rgba(255,255,255,0.1)" : "#dde4f5"}}>
-                  <div className="flex gap-1.5">
-                    {gig.setlists.map(sl => (
-                      <span key={sl.id} className={"text-[10px] font-bold px-2 py-1 rounded-lg " + (dark ? "bg-white/10 text-white/50" : "bg-[#f0f4ff] text-[#6b7a9e]")}>{sl.name} ({sl.songs.length})</span>
-                    ))}
+                  {gig.venue && (
+                    <div className={"text-xs flex items-center gap-1 mb-3 " + muted}>
+                      <MapPinIcon className="w-3 h-3 flex-shrink-0"/>{gig.venue}
+                    </div>
+                  )}
+
+                  {/* Stats row */}
+                  <div className="flex items-center gap-3 mb-3">
+                    <div className={"flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl " + (dark ? "bg-white/10 text-white/60" : "bg-[#f0f4ff] text-[#6b7a9e]")}>
+                      <MusicIcon className="w-3 h-3" />
+                      {totalSongs} song{totalSongs !== 1 ? "s" : ""}
+                    </div>
+                    <div className={"flex items-center gap-1.5 text-xs font-bold px-2.5 py-1.5 rounded-xl " + (dark ? "bg-white/10 text-white/60" : "bg-[#f0f4ff] text-[#6b7a9e]")}>
+                      <ListIcon className="w-3 h-3" />
+                      {gig.setlists.length} set{gig.setlists.length !== 1 ? "s" : ""}
+                    </div>
                   </div>
-                  <div className={"flex items-center gap-1 text-xs font-bold " + (dark ? "text-white/40" : "text-[#6b7a9e]")}>
-                    Open <ChevronRight className="w-3.5 h-3.5"/>
+
+                  {gig.notes && <p className={"text-xs italic line-clamp-1 mb-3 " + muted}>"{gig.notes}"</p>}
+
+                  <div className={"flex items-center justify-between pt-3 border-t " + (dark ? "border-white/10" : "border-[#f0f4ff]")}>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {gig.setlists.slice(0,3).map(sl => (
+                        <span key={sl.id} className={"text-[10px] font-bold px-2 py-1 rounded-lg " + (dark ? "bg-white/10 text-white/50" : "bg-[#f0f4ff] text-[#6b7a9e]")}>
+                          {sl.name} ({sl.songs.length})
+                        </span>
+                      ))}
+                    </div>
+                    <div className={"flex items-center gap-1 text-xs font-bold transition-colors " + (dark ? "text-white/40 group-hover:text-white/70" : "text-[#6b7a9e] group-hover:text-[#1a3a8f]")}>
+                      Open <ChevronRight className="w-3.5 h-3.5"/>
+                    </div>
                   </div>
                 </div>
               </div>

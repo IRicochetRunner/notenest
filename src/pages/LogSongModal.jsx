@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 
 // ── ICONS ────────────────────────────────────────────────────
 function MusicIcon({ className }) {
@@ -68,22 +68,22 @@ function StepSearch({ onSelect }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [arts, setArts] = useState({});
-  const debounceRef = useRef(null);
 
   useEffect(() => {
-    if (query.trim().length < 2) { setResults([]); return; }
+    if (query.trim().length < 2) { setResults([]); setLoading(false); return; }
     setLoading(true);
-    clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(async () => {
+    const timer = setTimeout(async () => {
       try {
-        const res = await fetch("https://itunes.apple.com/search?term=" + encodeURIComponent(query) + "&entity=song&limit=8&media=music");
+        const res = await fetch(
+          `/api/itunes?term=${encodeURIComponent(query)}&limit=8`
+        );
         const data = await res.json();
         setResults(data.results || []);
-      } catch(e) { setResults([]); }
-      finally { setLoading(false); }
-    }, 350);
-    return () => clearTimeout(debounceRef.current);
+      } catch(e) {
+        setResults([]);
+      } finally { setLoading(false); }
+    }, 400);
+    return () => clearTimeout(timer);
   }, [query]);
 
   return (
@@ -137,7 +137,9 @@ function StepSearch({ onSelect }) {
 
       {!query && (
         <div className="mt-8 text-center">
-          <div className="text-4xl mb-3">🎸</div>
+          <div className="w-12 h-12 bg-[#e8eeff] rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <MusicIcon className="w-6 h-6 text-[#1a3a8f]/50" />
+          </div>
           <div className="text-sm text-[#6b7a9e]">Start typing to search millions of songs</div>
         </div>
       )}
@@ -219,6 +221,12 @@ function StepRate({ song, skills, onBack, onSave }) {
   const [hovered, setHovered] = useState(0);
   const art = song.artworkUrl100?.replace("100x100bb","400x400bb");
 
+  // Auto-populate from iTunes data
+  const duration = song.trackTimeMillis ? parseFloat((song.trackTimeMillis / 60000).toFixed(2)) : null;
+  const genre = song.primaryGenreName || null;
+  const releaseYear = song.releaseDate?.slice(0,4) || null;
+  const durationStr = duration ? `${Math.floor(duration)}:${String(Math.round((duration%1)*60)).padStart(2,"0")}` : null;
+
   const progressLabels = ["Just started","Getting there","Pretty solid","Nearly there","Nailed it!"];
   const idx = Math.min(4, Math.floor(progress / 20));
 
@@ -229,7 +237,7 @@ function StepRate({ song, skills, onBack, onSave }) {
       <p className="text-sm text-[#6b7a9e] mb-5">Rate your playing and add any notes for later.</p>
 
       {/* Mini song card */}
-      <div className="flex gap-3 items-center mb-5 p-3 bg-[#f0f4ff] rounded-2xl border border-[#dde4f5]">
+      <div className="flex gap-3 items-center mb-3 p-3 bg-[#f0f4ff] rounded-2xl border border-[#dde4f5]">
         <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0 bg-[#e8eeff]">
           {art ? <img src={art} alt={song.trackName} className="w-full h-full object-cover" /> : <MusicIcon className="w-5 h-5 text-[#1a3a8f]/30" />}
         </div>
@@ -242,6 +250,33 @@ function StepRate({ song, skills, onBack, onSave }) {
         </div>
       </div>
 
+      {/* Auto-populated metadata strip */}
+      {(genre || durationStr || releaseYear) && (
+        <div className="flex flex-wrap gap-2 mb-5">
+          {genre && (
+            <div className="flex items-center gap-1.5 bg-[#f0f4ff] border border-[#dde4f5] rounded-xl px-3 py-1.5">
+              <span className="text-[10px] font-bold text-[#6b7a9e] uppercase tracking-wider">Genre</span>
+              <span className="text-xs font-bold text-[#0d1b3e]">{genre}</span>
+            </div>
+          )}
+          {durationStr && (
+            <div className="flex items-center gap-1.5 bg-[#f0f4ff] border border-[#dde4f5] rounded-xl px-3 py-1.5">
+              <span className="text-[10px] font-bold text-[#6b7a9e] uppercase tracking-wider">Length</span>
+              <span className="text-xs font-bold text-[#0d1b3e]">{durationStr}</span>
+            </div>
+          )}
+          {releaseYear && (
+            <div className="flex items-center gap-1.5 bg-[#f0f4ff] border border-[#dde4f5] rounded-xl px-3 py-1.5">
+              <span className="text-[10px] font-bold text-[#6b7a9e] uppercase tracking-wider">Year</span>
+              <span className="text-xs font-bold text-[#0d1b3e]">{releaseYear}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 bg-green-50 border border-green-200 rounded-xl px-3 py-1.5">
+            <span className="text-[10px] font-bold text-green-600 uppercase tracking-wider">Auto-filled from iTunes</span>
+          </div>
+        </div>
+      )}
+
       {/* Rating */}
       <div className="mb-5">
         <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-2">Your rating</div>
@@ -253,7 +288,7 @@ function StepRate({ song, skills, onBack, onSave }) {
               onClick={() => setRating(n)}
             />
           ))}
-          {rating > 0 && <span className="text-sm text-[#6b7a9e] ml-2 self-center">{["","Not there yet","Getting closer","Pretty good","Really solid","Nailed it! 🎸"][rating]}</span>}
+          {rating > 0 && <span className="text-sm text-[#6b7a9e] ml-2 self-center">{["","Not there yet","Getting closer","Pretty good","Really solid","Nailed it!"][rating]}</span>}
         </div>
       </div>
 
@@ -284,11 +319,11 @@ function StepRate({ song, skills, onBack, onSave }) {
       </div>
 
       <button
-        onClick={() => onSave({ rating, progress, notes })}
+        onClick={() => onSave({ rating, progress, notes, duration, genre })}
         disabled={rating === 0}
         className={"w-full py-3.5 font-black rounded-2xl border-none transition-all text-sm " + (rating > 0 ? "bg-[#1a3a8f] text-white shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#0f2460] cursor-pointer" : "bg-[#dde4f5] text-[#6b7a9e] cursor-not-allowed")}
         style={{ fontFamily:"Nunito, sans-serif" }}>
-        Add to my library 🎸
+        Add to my library
       </button>
     </div>
   );
@@ -325,7 +360,7 @@ export default function LogSongModal({ onClose, onAdd }) {
 
   const handleSelect = (s) => { setSong(s); setStep(2); };
   const handleConfirm = (sk) => { setSkills(sk); setStep(3); };
-  const handleSave = ({ rating, progress, notes }) => {
+  const handleSave = ({ rating, progress, notes, duration, genre }) => {
     const newSong = {
       id: Date.now(),
       title: song.trackName,
@@ -334,6 +369,8 @@ export default function LogSongModal({ onClose, onAdd }) {
       rating,
       progress,
       notes,
+      genre: genre || song.primaryGenreName || null,
+      duration: duration || null,
       date: new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" }),
       artworkUrl: song.artworkUrl100?.replace("100x100bb","400x400bb"),
     };

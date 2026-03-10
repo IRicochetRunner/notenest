@@ -265,7 +265,23 @@ function BuildingScreen({ answers }) {
 }
 
 // ── STEP 0: USERNAME ────────────────────────────────────────
+const ADJECTIVES = ["sonic","riff","golden","heavy","mellow","fret","groove","chord","bluesy","electric","funky","jazzy","cosmic","shred","velvet","iron","neon","quiet","wild","steel"];
+const NOUNS = ["picker","player","axeman","stringer","shredder","groover","bassist","strummer","rocker","riffler","soloist","fretboard","musician","jammer","plucky","slapper","noodler","plectrum","bridge","amp"];
+
+function generateUsernames() {
+  const picks = new Set();
+  while (picks.size < 3) {
+    const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+    const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+    const num = Math.floor(Math.random() * 90) + 10;
+    picks.add(`${adj}_${noun}${num}`);
+  }
+  return [...picks];
+}
+
 function StepUsername({ value, onChange }) {
+  const [suggestions, setSuggestions] = useState(() => generateUsernames());
+
   return (
     <div className="flex flex-col gap-4">
       <div className="relative">
@@ -279,8 +295,33 @@ function StepUsername({ value, onChange }) {
           className="w-full pl-8 pr-4 py-3.5 border-[1.5px] border-[#dde4f5] rounded-2xl text-sm bg-[#f0f4ff] outline-none focus:border-[#1a3a8f] transition-all font-bold text-[#0d1b3e]"
         />
       </div>
-      <p className="text-xs text-[#6b7a9e]">Only letters, numbers, and underscores. This is how others will find you.</p>
-      {value && value.length >= 3 && (
+
+      {/* Suggestions */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider">Suggestions</span>
+          <button onClick={() => setSuggestions(generateUsernames())}
+            className="text-xs font-bold text-[#4a72e8] bg-transparent border-none cursor-pointer hover:underline">
+            Regenerate
+          </button>
+        </div>
+        <div className="flex flex-col gap-2">
+          {suggestions.map(s => (
+            <button key={s} onClick={() => onChange(s)}
+              className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border-[1.5px] text-left transition-all cursor-pointer text-sm font-bold ${
+                value === s
+                  ? "border-[#1a3a8f] bg-[#e8eeff] text-[#1a3a8f]"
+                  : "border-[#dde4f5] bg-white text-[#0d1b3e] hover:border-[#4a72e8] hover:bg-[#f0f4ff]"
+              }`}>
+              <span className="text-[#6b7a9e]">@</span>{s}
+              {value === s && <span className="ml-auto text-[#1a3a8f]"><CheckIcon className="w-4 h-4" /></span>}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs text-[#6b7a9e]">Pick a suggestion or type your own. Letters, numbers, and underscores only.</p>
+      {value && value.length >= 3 && !suggestions.includes(value) && (
         <div className="flex items-center gap-2 text-sm text-green-600 font-semibold">
           <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
             <CheckIcon className="w-3 h-3 text-white" />
