@@ -95,21 +95,20 @@ function useAlbumArt(query) {
     // Use iTunes search with a small delay to avoid rate limiting
     const timer = setTimeout(() => {
       fetch(
-        `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=1&media=music`,
-        { mode: "cors" }
+        `https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=3&media=music`
       )
         .then((r) => r.json())
         .then((d) => {
-          if (d.results?.[0]?.artworkUrl100) {
-            const url = d.results[0].artworkUrl100
-              .replace("100x100bb", "400x400bb")
-              .replace("100x100bb.jpg", "400x400bb.jpg");
+          const result = d.results?.find(r => r.artworkUrl100) || d.results?.[0];
+          if (result?.artworkUrl100) {
+            const url = result.artworkUrl100
+              .replace("100x100bb", "600x600bb");
             artCache[query] = url;
             setArt(url);
           }
         })
         .catch(() => {});
-    }, Math.random() * 300); // stagger requests so they don't all fire at once
+    }, Math.random() * 500 + 100);
 
     return () => clearTimeout(timer);
   }, [query]);

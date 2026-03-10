@@ -193,6 +193,7 @@ function BuildingScreen({ answers }) {
       if (session?.user) {
         const stored = JSON.parse(localStorage.getItem("nn_profile") || "{}");
         await supabase.from("profiles").update({
+          username: answers.username || stored.username,
           instrument: answers.instrument,
           level: answers.level,
           genres: answers.genres,
@@ -200,6 +201,7 @@ function BuildingScreen({ answers }) {
         }).eq("id", session.user.id);
         localStorage.setItem("nn_profile", JSON.stringify({
           ...stored,
+          username: answers.username || stored.username,
           instrument: answers.instrument,
           level: answers.level,
           genres: answers.genres,
@@ -262,13 +264,42 @@ function BuildingScreen({ answers }) {
   );
 }
 
+// ── STEP 0: USERNAME ────────────────────────────────────────
+function StepUsername({ value, onChange }) {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="relative">
+        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[#6b7a9e] font-bold text-sm">@</span>
+        <input
+          type="text"
+          value={value || ""}
+          onChange={e => onChange(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ""))}
+          placeholder="yourname"
+          maxLength={20}
+          className="w-full pl-8 pr-4 py-3.5 border-[1.5px] border-[#dde4f5] rounded-2xl text-sm bg-[#f0f4ff] outline-none focus:border-[#1a3a8f] transition-all font-bold text-[#0d1b3e]"
+        />
+      </div>
+      <p className="text-xs text-[#6b7a9e]">Only letters, numbers, and underscores. This is how others will find you.</p>
+      {value && value.length >= 3 && (
+        <div className="flex items-center gap-2 text-sm text-green-600 font-semibold">
+          <div className="w-5 h-5 bg-green-500 rounded-full flex items-center justify-center">
+            <CheckIcon className="w-3 h-3 text-white" />
+          </div>
+          @{value} looks good!
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── STEP CONFIG ─────────────────────────────────────────────
 const STEPS = [
-  { label: "Step 1 of 5", title: "What do you play?",                      sub: "NoteNest works for both guitar and bass players at every level." },
-  { label: "Step 2 of 5", title: "How would you describe your playing?",   sub: "Be honest — this helps us recommend the right songs for where you actually are." },
-  { label: "Step 3 of 5", title: "What music do you love?",                sub: "Pick as many as you like. This shapes every song recommendation you get." },
-  { label: "Step 4 of 5", title: "Who are your favorite artists?",         sub: "Type a name and press Enter. Add up to 5 — the more you add the better your recommendations." },
-  { label: "Step 5 of 5", title: "How much time can you practice?",        sub: "We'll pace your recommendations around your schedule. You can always change this later." },
+  { label: "Step 1 of 6", title: "Pick your username",                       sub: "This is your identity on NoteNest. You can always change it later." },
+  { label: "Step 2 of 6", title: "What do you play?",                        sub: "NoteNest works for both guitar and bass players at every level." },
+  { label: "Step 3 of 6", title: "How would you describe your playing?",     sub: "Be honest — this helps us recommend the right songs for where you actually are." },
+  { label: "Step 4 of 6", title: "What music do you love?",                  sub: "Pick as many as you like. This shapes every song recommendation you get." },
+  { label: "Step 5 of 6", title: "Who are your favorite artists?",           sub: "Type a name and press Enter. Add up to 5 — the more you add the better your recommendations." },
+  { label: "Step 6 of 6", title: "How much time can you practice?",          sub: "We'll pace your recommendations around your schedule. You can always change this later." },
 ];
 
 // ── MAIN COMPONENT ──────────────────────────────────────────
@@ -277,6 +308,7 @@ export default function Onboarding() {
   const [cur, setCur] = useState(0);
   const [building, setBuilding] = useState(false);
   const [answers, setAnswers] = useState({
+    username: "",
     instrument: null,
     level: null,
     genres: [],
@@ -287,11 +319,12 @@ export default function Onboarding() {
   const update = (key, val) => setAnswers((a) => ({ ...a, [key]: val }));
 
   const canContinue = () => {
-    if (cur === 0) return !!answers.instrument;
-    if (cur === 1) return !!answers.level;
-    if (cur === 2) return answers.genres.length > 0;
-    if (cur === 3) return true;
-    if (cur === 4) return !!answers.time;
+    if (cur === 0) return answers.username && answers.username.length >= 3;
+    if (cur === 1) return !!answers.instrument;
+    if (cur === 2) return !!answers.level;
+    if (cur === 3) return answers.genres.length > 0;
+    if (cur === 4) return true;
+    if (cur === 5) return !!answers.time;
     return false;
   };
 
@@ -364,11 +397,12 @@ export default function Onboarding() {
             <p className="text-sm text-[#6b7a9e] mb-7 leading-relaxed">{STEPS[cur].sub}</p>
 
             <div key={cur}>
-              {cur === 0 && <StepInstrument value={answers.instrument} onChange={(v) => update("instrument", v)} />}
-              {cur === 1 && <StepLevel      value={answers.level}      onChange={(v) => update("level", v)} />}
-              {cur === 2 && <StepGenres     value={answers.genres}     onChange={(v) => update("genres", v)} />}
-              {cur === 3 && <StepArtists    value={answers.artists}    onChange={(v) => update("artists", v)} />}
-              {cur === 4 && <StepTime       value={answers.time}       onChange={(v) => update("time", v)} />}
+              {cur === 0 && <StepUsername   value={answers.username}   onChange={(v) => update("username", v)} />}
+              {cur === 1 && <StepInstrument value={answers.instrument} onChange={(v) => update("instrument", v)} />}
+              {cur === 2 && <StepLevel      value={answers.level}      onChange={(v) => update("level", v)} />}
+              {cur === 3 && <StepGenres     value={answers.genres}     onChange={(v) => update("genres", v)} />}
+              {cur === 4 && <StepArtists    value={answers.artists}    onChange={(v) => update("artists", v)} />}
+              {cur === 5 && <StepTime       value={answers.time}       onChange={(v) => update("time", v)} />}
             </div>
           </div>
 
