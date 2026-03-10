@@ -1,7 +1,10 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { supabase } from "../supabase";
+import AuthModal from "../components/AuthModal";
 import LogSongModal from "./LogSongModal";
 import SetlistBuilder from "./SetlistBuilder";
 import SongStructureDiagram from "../components/SongStructureDiagram";
+import Packs from "../components/Packs";
 
 // ── ICONS ────────────────────────────────────────────────────
 function MusicIcon({ className }) {
@@ -560,42 +563,58 @@ function StreamingLinks({ song }) {
     {
       name: "Spotify",
       url: `https://open.spotify.com/search/${q}`,
-      bg: "#1DB954", text: "#fff",
-      icon: <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/></svg>,
+      bg: "#1DB954", text: "#fff", border: "#1DB954",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+          <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+        </svg>
+      ),
     },
     {
       name: "Apple Music",
       url: `https://music.apple.com/search?term=${q}`,
-      bg: "#fc3c44", text: "#fff",
-      icon: <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M23.994 6.124a9.23 9.23 0 00-.24-2.19c-.317-1.31-1.062-2.31-2.18-3.043a5.022 5.022 0 00-1.877-.726 10.496 10.496 0 00-1.564-.15c-.04-.003-.083-.01-.124-.013H5.986c-.152.01-.303.017-.455.026C4.786.07 4.043.15 3.34.428 2.004.958 1.04 1.88.475 3.208A4.97 4.97 0 00.09 4.8c-.043.52-.047 1.04-.05 1.56-.003.28 0 .56 0 .84v9.6c0 .32.003.64.01.96.02.72.07 1.44.28 2.14.55 1.87 1.9 2.98 3.82 3.32.48.09.97.12 1.46.13H18.4c.52-.01 1.04-.05 1.55-.15 1.95-.36 3.27-1.5 3.79-3.41.15-.56.2-1.13.22-1.7.02-.56.02-1.13.02-1.7V8.03c0-.63-.01-1.27-.01-1.9zm-7.06 10.58c0 .38-.01.77-.06 1.15-.1.78-.44 1.42-1.14 1.83-.44.26-.93.36-1.44.38-.98.04-1.78-.5-2.07-1.42-.12-.38-.14-.77-.07-1.16.15-.88.75-1.46 1.62-1.69.5-.13 1.01-.17 1.52-.22.26-.03.52-.07.78-.12.27-.05.4-.22.4-.49V9.3c0-.3-.14-.42-.43-.36l-3.89.78c-.28.06-.4.2-.4.5v6.27c0 .38-.01.77-.06 1.15-.1.78-.44 1.42-1.14 1.83-.44.26-.93.36-1.44.38-.98.04-1.78-.5-2.07-1.42-.12-.38-.14-.77-.07-1.16.15-.88.75-1.46 1.62-1.69.5-.13 1.01-.17 1.52-.22.26-.03.52-.07.78-.12.27-.05.4-.22.4-.49v-7.5c0-.35.2-.6.54-.68l5.3-1.06c.32-.06.5.1.5.43v8.37z"/></svg>,
+      bg: "#fc3c44", text: "#fff", border: "#fc3c44",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+          <path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/>
+        </svg>
+      ),
     },
     {
-      name: "YouTube",
+      name: "YouTube Music",
       url: `https://music.youtube.com/search?q=${q}`,
-      bg: "#FF0000", text: "#fff",
-      icon: <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/></svg>,
+      bg: "#FF0000", text: "#fff", border: "#FF0000",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+          <path d="M23.495 6.205a3.007 3.007 0 00-2.088-2.088c-1.87-.501-9.396-.501-9.396-.501s-7.507-.01-9.396.501A3.007 3.007 0 00.527 6.205a31.247 31.247 0 00-.522 5.805 31.247 31.247 0 00.522 5.783 3.007 3.007 0 002.088 2.088c1.868.502 9.396.502 9.396.502s7.506 0 9.396-.502a3.007 3.007 0 002.088-2.088 31.247 31.247 0 00.5-5.783 31.247 31.247 0 00-.5-5.805zM9.609 15.601V8.408l6.264 3.602z"/>
+        </svg>
+      ),
     },
     {
       name: "Genius",
       url: `https://genius.com/search?q=${q}`,
-      bg: "#ffff64", text: "#111",
-      icon: <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M12 0C5.372 0 0 5.372 0 12s5.372 12 12 12 12-5.372 12-12S18.628 0 12 0zm0 3.6c1.993 0 3.815.724 5.227 1.913L5.513 17.227A8.354 8.354 0 013.6 12c0-4.632 3.768-8.4 8.4-8.4zm0 16.8a8.356 8.356 0 01-5.227-1.813L18.487 6.573A8.354 8.354 0 0120.4 12c0 4.632-3.768 8.4-8.4 8.4z"/></svg>,
+      bg: "#ffff64", text: "#111", border: "#e6e600",
+      icon: (
+        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+          <path d="M12 0C5.373 0 0 5.373 0 12c0 6.628 5.373 12 12 12 6.628 0 12-5.372 12-12C24 5.373 18.628 0 12 0zm3.37 15.48c-.742.901-1.89 1.43-3.37 1.43-2.722 0-4.8-2.017-4.8-4.91 0-2.862 2.078-4.91 4.8-4.91 1.327 0 2.385.436 3.14 1.205l-1.128 1.161c-.496-.511-1.157-.794-2.012-.794-1.72 0-2.943 1.307-2.943 3.338 0 2.032 1.222 3.339 2.943 3.339.906 0 1.663-.3 2.19-.857.436-.452.665-1.073.755-1.886H12v-1.497h4.77c.052.285.082.585.082.916 0 1.513-.482 2.739-1.482 3.465z"/>
+        </svg>
+      ),
     },
   ];
 
   return (
     <div>
-      <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-2">Listen on</div>
-      <div className="grid grid-cols-4 gap-2">
+      <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-3">Listen on</div>
+      <div className="grid grid-cols-4 gap-3">
         {links.map(l => (
           <a key={l.name} href={l.url} target="_blank" rel="noopener noreferrer"
-            className="flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border border-[#e8eeff] hover:border-transparent hover:shadow-md transition-all no-underline group"
-            style={{ background: "#fff" }}
-            onMouseEnter={e => { e.currentTarget.style.background = l.bg; e.currentTarget.style.color = l.text; }}
-            onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.color = ""; }}
+            className="flex flex-col items-center gap-2 py-4 px-2 rounded-2xl border-2 transition-all no-underline group"
+            style={{ background: "#fff", borderColor: l.bg + "33" }}
+            onMouseEnter={e => { e.currentTarget.style.background = l.bg; e.currentTarget.style.borderColor = l.bg; e.currentTarget.style.transform = "translateY(-2px)"; e.currentTarget.style.boxShadow = `0 6px 20px ${l.bg}44`; }}
+            onMouseLeave={e => { e.currentTarget.style.background = "#fff"; e.currentTarget.style.borderColor = l.bg + "33"; e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
           >
-            <span style={{ color: l.bg }} className="group-hover:!text-inherit transition-colors">{l.icon}</span>
-            <span className="text-[10px] font-bold text-[#6b7a9e] group-hover:text-inherit transition-colors">{l.name}</span>
+            <span style={{ color: l.bg, transition: "color .15s" }} className="group-hover:!text-white">{l.icon}</span>
+            <span className="text-[11px] font-bold text-[#6b7a9e] text-center leading-tight group-hover:text-white transition-colors">{l.name}</span>
           </a>
         ))}
       </div>
@@ -746,17 +765,55 @@ function countUniqueSkills(songs) {
 export default function Dashboard({ darkMode, setDarkMode }) {
   const [tab, setTab] = useState("library");
   const [view, setView] = useState("grid");
-  const [songs, setSongs] = useState(INIT_SONGS);
+  const [songs, setSongs] = useState([]);
   const [selected, setSelected] = useState(null);
   const [showLog, setShowLog] = useState(false);
   const [structureSong, setStructureSong] = useState(null);
   const [search, setSearch] = useState("");
   const [filterSkill, setFilterSkill] = useState("All");
   const [filterRating, setFilterRating] = useState(0);
+  const [user, setUser] = useState(null);
+  const [loadingSongs, setLoadingSongs] = useState(true);
+  const [showAuth, setShowAuth] = useState(false);
   const dark = darkMode;
 
-  // Profile — pulled from localStorage (saved during onboarding)
-  const username   = getUsername() || "there";
+  // ── AUTH + DATA LOADING ──────────────────────────────────
+  useEffect(() => {
+    // Get current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      if (session?.user) loadSongs(session.user.id);
+      else { setSongs(INIT_SONGS); setLoadingSongs(false); }
+    });
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+      if (session?.user) loadSongs(session.user.id);
+      else { setSongs(INIT_SONGS); setLoadingSongs(false); }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  async function loadSongs(userId) {
+    setLoadingSongs(true);
+    const { data, error } = await supabase
+      .from("songs")
+      .select("*")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false });
+    if (!error && data) setSongs(data);
+    else setSongs(INIT_SONGS);
+    setLoadingSongs(false);
+  }
+
+  async function handleSignOut() {
+    await supabase.auth.signOut();
+    setUser(null);
+    setSongs(INIT_SONGS);
+  }
+
+  // Profile — pulled from Supabase user or localStorage fallback
+  const username   = user?.user_metadata?.username || getUsername() || "there";
   const displayName = username.charAt(0).toUpperCase() + username.slice(1);
   const avatarLetter = username.charAt(0).toUpperCase() || "?";
   const streak     = calcStreak(songs);
@@ -778,17 +835,48 @@ export default function Dashboard({ darkMode, setDarkMode }) {
     });
   }, [songs, search, filterSkill, filterRating]);
 
-  const addSong = (newSong) => setSongs((prev) => [newSong, ...prev]);
-
-  const updateSong = (updated) => {
-    setSongs((prev) => prev.map((s) => s.id === updated.id ? updated : s));
-    setSelected(updated);
+  const addSong = async (newSong) => {
+    if (user) {
+      const { data, error } = await supabase.from("songs").insert({
+        user_id: user.id,
+        title: newSong.title,
+        artist: newSong.artist,
+        skills: newSong.skills || [],
+        rating: newSong.rating || 0,
+        progress: newSong.progress || 0,
+        notes: newSong.notes || "",
+        date: newSong.date || new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" }),
+        parts: newSong.parts || [],
+        structure: newSong.structure || [],
+      }).select().single();
+      if (!error && data) setSongs(prev => [data, ...prev]);
+    } else {
+      setSongs(prev => [{ ...newSong, id: Date.now() }, ...prev]);
+    }
   };
 
-  // When notes are saved from the structure diagram, persist them
-  const handleStructureSave = (updatedSong) => {
-    setSongs((prev) => prev.map((s) => s.id === updatedSong.id ? updatedSong : s));
+  const updateSong = async (updated) => {
+    setSongs(prev => prev.map(s => s.id === updated.id ? updated : s));
+    setSelected(updated);
+    if (user) {
+      await supabase.from("songs").update({
+        title: updated.title, artist: updated.artist,
+        skills: updated.skills || [], rating: updated.rating || 0,
+        progress: updated.progress || 0, notes: updated.notes || "",
+        parts: updated.parts || [], structure: updated.structure || [],
+      }).eq("id", updated.id).eq("user_id", user.id);
+    }
+  };
+
+  const handleStructureSave = async (updatedSong) => {
+    setSongs(prev => prev.map(s => s.id === updatedSong.id ? updatedSong : s));
     setStructureSong(null);
+    if (user) {
+      await supabase.from("songs").update({
+        parts: updatedSong.parts || [],
+        structure: updatedSong.structure || [],
+      }).eq("id", updatedSong.id).eq("user_id", user.id);
+    }
   };
 
   const bg   = dark ? "bg-[#0d1b3e]" : "bg-[#f0f4ff]";
@@ -812,7 +900,16 @@ export default function Dashboard({ darkMode, setDarkMode }) {
           <button onClick={() => setShowLog(true)} className="flex items-center gap-2 bg-[#1a3a8f] text-white font-black px-5 py-2.5 rounded-xl shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 transition-all border-none cursor-pointer text-sm" style={{ fontFamily:"Nunito, sans-serif" }}>
             <PlusIcon className="w-4 h-4" /> Log a song
           </button>
-          <a href="/settings" className="w-9 h-9 bg-[#1a3a8f] rounded-full flex items-center justify-center text-white font-black text-sm cursor-pointer no-underline hover:bg-[#4a72e8] transition-colors">{avatarLetter}</a>
+          {user ? (
+            <div className="flex items-center gap-2">
+              <a href={`/profile/@${username}`} title="View profile" className="w-9 h-9 bg-[#1a3a8f] rounded-full flex items-center justify-center text-white font-black text-sm cursor-pointer no-underline hover:bg-[#4a72e8] transition-colors">{avatarLetter}</a>
+              <button onClick={handleSignOut} className="text-xs font-bold text-[#6b7a9e] hover:text-[#1a3a8f] bg-transparent border-none cursor-pointer transition-colors">Sign out</button>
+            </div>
+          ) : (
+            <button onClick={() => setShowAuth(true)} className="text-sm font-bold text-[#1a3a8f] bg-[#e8eeff] px-4 py-2.5 rounded-xl border-none cursor-pointer hover:bg-[#1a3a8f] hover:text-white transition-all">
+              Sign in
+            </button>
+          )}
         </div>
       </nav>
 
@@ -825,10 +922,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
             <div className="relative z-10">
               {streak > 0 && (
                 <div className="flex items-center gap-2 mb-4">
-                  <div className="w-5 h-5 rounded-full bg-amber-400 flex items-center justify-center flex-shrink-0">
-                    <svg viewBox="0 0 24 24" className="w-3 h-3" fill="white"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
-                  </div>
-                  <span className="text-white/80 text-sm font-bold">{streak}-day streak 🔥</span>
+                  <span className="text-white/80 text-sm font-bold">{streak}-day streak</span>
                 </div>
               )}
               <h1 className="font-black text-4xl text-white mb-2 leading-tight" style={{ fontFamily:"Nunito, sans-serif" }}>Welcome back, {displayName}</h1>
@@ -849,7 +943,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
         {/* TABS */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-1 bg-white rounded-2xl p-1.5 border border-[#dde4f5] w-fit shadow-sm">
-            {[["library","Library"],["activity","Activity"],["skills","Skills"],["setlists","Setlists"]].map(([id,label]) => (
+            {[["library","Library"],["activity","Activity"],["skills","Skills"],["setlists","Setlists"],["packs","Packs"]].map(([id,label]) => (
               <button key={id} onClick={() => setTab(id)}
                 className={"px-6 py-2.5 rounded-xl font-bold text-sm border-none cursor-pointer transition-all "+(tab===id?"bg-[#1a3a8f] text-white shadow-[0_2px_0_#0f2460]":"bg-transparent text-[#6b7a9e] hover:text-[#1a3a8f]")}
                 style={{ fontFamily:"Nunito, sans-serif" }}>
@@ -1013,11 +1107,23 @@ export default function Dashboard({ darkMode, setDarkMode }) {
             <SetlistBuilder songs={songs} dark={dark} />
           </div>
         )}
+
+        {/* PACKS TAB */}
+        {tab === "packs" && (
+          <div>
+            <div className="mb-6">
+              <h2 className="font-black text-2xl text-[#0d1b3e]" style={{ fontFamily:"Nunito, sans-serif" }}>Learning Packs</h2>
+              <p className="text-sm text-[#6b7a9e]">Curated song collections to guide your learning journey</p>
+            </div>
+            <Packs songs={songs} onAddSong={addSong} />
+          </div>
+        )}
       </div>
 
       {/* ── MODALS ── */}
       {selected && <SongModal song={selected} onClose={() => setSelected(null)} onUpdate={updateSong} onOpenStructure={setStructureSong} />}
       {showLog   && <LogSongModal onClose={() => setShowLog(false)} onAdd={addSong} />}
+      {showAuth  && <AuthModal onClose={() => setShowAuth(false)} onAuth={setUser} />}
 
       {/* Song Structure Diagram */}
       {structureSong && (
