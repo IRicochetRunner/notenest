@@ -1121,7 +1121,7 @@ function SongModal({ song, onClose, onUpdate, onOpenStructure }) {
             {!isPro && attachments.length >= attachLimit && (
               <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center justify-between gap-3">
                 <span className="text-xs text-amber-700 font-bold">Free plan allows 1 attachment per song</span>
-                <button className="text-xs font-black text-[#1a3a8f] bg-white border border-[#dde4f5] px-3 py-1 rounded-lg cursor-pointer hover:bg-[#e8eeff] transition-all border-none">Upgrade to Pro</button>
+                <button onClick={handleUpgrade} className="text-xs font-black text-[#1a3a8f] bg-white border border-[#dde4f5] px-3 py-1 rounded-lg cursor-pointer hover:bg-[#e8eeff] transition-all border-none">Upgrade to Pro</button>
               </div>
             )}
 
@@ -1673,9 +1673,14 @@ export default function Dashboard({ darkMode, setDarkMode }) {
         body: JSON.stringify({ priceId, userId: user?.id, email: user?.email }),
       });
       const data = await res.json();
-      if (data.url) window.location.href = data.url;
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert("Checkout error: " + (data.error || "No URL returned"));
+      }
     } catch (e) {
       console.error("Checkout error:", e);
+      alert("Checkout failed — check console for details");
     }
   }
   const [loadingSongs, setLoadingSongs] = useState(true);
@@ -1945,7 +1950,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
                 <span className="text-xs text-[#6b7a9e] ml-2">· 1 attachment per song · 9 Pro packs locked</span>
               </div>
             </div>
-            <button className="flex-shrink-0 bg-[#1a3a8f] text-white font-black text-xs px-4 py-2 rounded-xl border-none cursor-pointer hover:bg-[#4a72e8] transition-all" style={{fontFamily:"Nunito,sans-serif"}}>
+            <button onClick={handleUpgrade} className="flex-shrink-0 bg-[#1a3a8f] text-white font-black text-xs px-4 py-2 rounded-xl border-none cursor-pointer hover:bg-[#4a72e8] transition-all" style={{fontFamily:"Nunito,sans-serif"}}>
               Upgrade to Pro $7/mo
             </button>
           </div>
