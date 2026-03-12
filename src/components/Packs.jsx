@@ -202,6 +202,8 @@ const SONG_BREAKDOWNS = {
 const ALL_PACKS = [
   {
     id: "flea",
+    pro: true,
+    instrument: "Bass",
     type: "musician",
     title: "Learn Like Flea",
     subtitle: "Red Hot Chili Peppers",
@@ -220,6 +222,8 @@ const ALL_PACKS = [
   },
   {
     id: "mcartney",
+    pro: true,
+    instrument: "Bass",
     type: "musician",
     title: "Learn Like McCartney",
     subtitle: "The Beatles",
@@ -237,6 +241,8 @@ const ALL_PACKS = [
   },
   {
     id: "geddy",
+    pro: true,
+    instrument: "Bass",
     type: "musician",
     title: "Learn Like Geddy Lee",
     subtitle: "Rush",
@@ -253,6 +259,8 @@ const ALL_PACKS = [
   },
   {
     id: "jpj",
+    pro: true,
+    instrument: "Bass",
     type: "musician",
     title: "Learn Like John Paul Jones",
     subtitle: "Led Zeppelin",
@@ -269,6 +277,8 @@ const ALL_PACKS = [
   },
   {
     id: "metallica",
+    pro: true,
+    instrument: "Guitar",
     type: "band",
     title: "Metallica Essentials",
     subtitle: "Thrash Metal Foundations",
@@ -286,6 +296,8 @@ const ALL_PACKS = [
   },
   {
     id: "rhcp",
+    pro: true,
+    instrument: "Guitar",
     type: "band",
     title: "RHCP Deep Cuts",
     subtitle: "Beyond the Hits",
@@ -302,6 +314,7 @@ const ALL_PACKS = [
   },
   {
     id: "beginner-bass",
+    instrument: "Bass",
     type: "difficulty",
     title: "Beginner Bass Lines",
     subtitle: "Start Your Journey",
@@ -320,6 +333,7 @@ const ALL_PACKS = [
   },
   {
     id: "intermediate-bass",
+    instrument: "Bass",
     type: "difficulty",
     title: "Next Level Bass",
     subtitle: "Level Up Your Playing",
@@ -336,6 +350,7 @@ const ALL_PACKS = [
   },
   {
     id: "advanced-bass",
+    instrument: "Bass",
     type: "difficulty",
     title: "Bass Master Class",
     subtitle: "Push Your Limits",
@@ -351,6 +366,7 @@ const ALL_PACKS = [
   },
   {
     id: "slap-bass",
+    instrument: "Bass",
     type: "technique",
     title: "Slap Bass Masterclass",
     subtitle: "Thumb + Pop Technique",
@@ -367,6 +383,7 @@ const ALL_PACKS = [
   },
   {
     id: "fingerstyle",
+    instrument: "Guitar",
     type: "technique",
     title: "Fingerstyle Foundations",
     subtitle: "Two-Finger Technique",
@@ -384,6 +401,7 @@ const ALL_PACKS = [
   },
   {
     id: "pick-playing",
+    instrument: "Guitar",
     type: "technique",
     title: "Pick Playing Essentials",
     subtitle: "Precision & Attack",
@@ -399,6 +417,8 @@ const ALL_PACKS = [
   },
   {
     id: "jimi",
+    pro: true,
+    instrument: "Guitar",
     type: "musician",
     title: "Learn Like Jimi Hendrix",
     subtitle: "Guitar Legend",
@@ -416,6 +436,8 @@ const ALL_PACKS = [
   },
   {
     id: "page",
+    pro: true,
+    instrument: "Guitar",
     type: "musician",
     title: "Learn Like Jimmy Page",
     subtitle: "Led Zeppelin",
@@ -433,6 +455,7 @@ const ALL_PACKS = [
   },
   {
     id: "guitar-beginner",
+    instrument: "Guitar",
     type: "technique",
     title: "First Guitar Songs",
     subtitle: "Start Here",
@@ -450,6 +473,8 @@ const ALL_PACKS = [
   },
   {
     id: "bonham",
+    pro: true,
+    instrument: "Drums",
     type: "musician",
     title: "Learn Like John Bonham",
     subtitle: "Led Zeppelin",
@@ -467,6 +492,7 @@ const ALL_PACKS = [
   },
   {
     id: "drums-beginner",
+    instrument: "Drums",
     type: "difficulty",
     title: "Beginner Drum Songs",
     subtitle: "Start Your Groove",
@@ -484,6 +510,7 @@ const ALL_PACKS = [
   },
   {
     id: "drums-technique",
+    instrument: "Drums",
     type: "technique",
     title: "Drum Fills Masterclass",
     subtitle: "Chops & Transitions",
@@ -572,10 +599,10 @@ function SongRowWithArt({ song, index, done, adding, onAdd, packColor }) {
         </div>
 
         {/* Tags */}
-        <div className="hidden sm:flex items-center gap-2 flex-shrink-0">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-[10px] font-bold bg-[#e8eeff] text-[#1a3a8f] px-2 py-1 rounded-full">{song.skill}</span>
-          <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${DIFF_COLOR[song.difficulty]}`}>{song.difficulty}</span>
-          <span className="text-[10px] text-[#b0baca] font-medium">{song.duration}</span>
+          <span className={`text-xs font-black px-3 py-1 rounded-full ${DIFF_COLOR[song.difficulty]}`}>{song.difficulty}</span>
+          <span className="text-[10px] text-[#b0baca] font-medium hidden sm:block">{song.duration}</span>
         </div>
 
         {/* Expand button */}
@@ -627,16 +654,25 @@ function SongRowWithArt({ song, index, done, adding, onAdd, packColor }) {
 }
 
 // ── PACK CARD ─────────────────────────────────────────────────
-function PackCard({ pack, onOpen, isStarted, progress }) {
+function PackCard({ pack, onOpen, isStarted, progress, isPro }) {
+  const locked = pack.pro && !isPro;
   return (
     <div
       onClick={() => onOpen(pack)}
-      className="bg-white rounded-2xl border border-[#dde4f5] overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group flex flex-col"
+      className={"bg-white rounded-2xl border border-[#dde4f5] overflow-hidden cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all duration-200 group flex flex-col relative " + (locked ? "opacity-80" : "")}
       style={{ aspectRatio: "1 / 1" }}
     >
+      {/* PRO lock badge */}
+      {locked && (
+        <div className="absolute top-2 right-2 z-20 flex items-center gap-1 bg-[#f0a500] text-white text-[9px] font-black px-2 py-1 rounded-full shadow-md">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="w-2.5 h-2.5"><path d="M12 1C8.676 1 6 3.676 6 7v1H4v15h16V8h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 110 4 2 2 0 010-4z"/></svg>
+          PRO
+        </div>
+      )}
       {/* Square album collage header — takes up 60% */}
       <div className="relative overflow-hidden flex-shrink-0" style={{ height: "60%" }}>
         <AlbumCollage songs={pack.songs} color={pack.color} />
+        {locked && <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />}
         {/* Dark gradient overlay with title */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 p-3">
@@ -658,7 +694,11 @@ function PackCard({ pack, onOpen, isStarted, progress }) {
         <p className="text-xs text-[#6b7a9e] leading-relaxed line-clamp-2">{pack.description}</p>
         <div className="flex items-center justify-between mt-3">
           <span className="text-xs font-bold text-[#6b7a9e]">{pack.songs.length} songs</span>
-          {isStarted ? (
+          {locked ? (
+            <span className="text-xs font-bold text-[#f0a500] bg-amber-50 px-3 py-1 rounded-xl border border-amber-200">
+              Upgrade →
+            </span>
+          ) : isStarted ? (
             <div className="flex items-center gap-2">
               <div className="w-20 h-1.5 bg-[#e8eeff] rounded-full overflow-hidden">
                 <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: pack.color }} />
@@ -677,9 +717,10 @@ function PackCard({ pack, onOpen, isStarted, progress }) {
 }
 
 // ── PACK MODAL ────────────────────────────────────────────────
-function PackModal({ pack, onClose, onStart, isStarted, completedSongs, onAddSong }) {
+function PackModal({ pack, onClose, onStart, isStarted, completedSongs, onAddSong, isPro }) {
   const [adding, setAdding] = useState(null);
   const arts = usePackAlbumArts(pack.songs.slice(0, 4));
+  const locked = pack.pro && !isPro;
 
   const progress = isStarted ? Math.round((completedSongs.size / pack.songs.length) * 100) : 0;
 
@@ -742,29 +783,57 @@ function PackModal({ pack, onClose, onStart, isStarted, completedSongs, onAddSon
           <p className="text-sm text-[#6b7a9e] leading-relaxed">{pack.description}</p>
         </div>
 
-        {/* Songs */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-3">Songs in this pack</div>
-          <div className="flex flex-col gap-2">
-            {pack.songs.map((song, i) => (
-              <SongRowWithArt
-                key={song.title}
-                song={song}
-                index={i}
-                done={completedSongs.has(song.title)}
-                adding={adding === song.title}
-                packColor={pack.color}
-                onAdd={() => {
-                  onAddSong(song);
-                  setAdding(song.title);
-                  setTimeout(() => setAdding(null), 1500);
-                }}
-              />
-            ))}
+        {/* Songs / Upgrade wall */}
+        {locked ? (
+          <div className="flex-1 flex flex-col items-center justify-center px-8 py-12 text-center">
+            <div className="w-16 h-16 bg-amber-50 border-2 border-amber-200 rounded-3xl flex items-center justify-center mb-4">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 text-amber-500"><path d="M12 1C8.676 1 6 3.676 6 7v1H4v15h16V8h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 110 4 2 2 0 010-4z"/></svg>
+            </div>
+            <div className="font-black text-xl text-[#0d1b3e] mb-2" style={{fontFamily:"Nunito,sans-serif"}}>Pro Pack</div>
+            <p className="text-sm text-[#6b7a9e] mb-6 max-w-xs leading-relaxed">
+              <strong className="text-[#0d1b3e]">{pack.title}</strong> is only available on the Pro plan. Upgrade to unlock all {9} artist & band packs.
+            </p>
+            <div className="bg-[#f0f4ff] rounded-2xl p-4 w-full max-w-xs mb-6 text-left">
+              {["Unlimited songs","All 18 packs unlocked","Unlimited attachments","Unlimited setlists","Monthly progress reports"].map(f => (
+                <div key={f} className="flex items-center gap-2 py-1.5">
+                  <div className="w-4 h-4 bg-[#1a3a8f] rounded-full flex items-center justify-center flex-shrink-0">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" className="w-2 h-2"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                  <span className="text-xs font-bold text-[#0d1b3e]">{f}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={onClose}
+              className="w-full max-w-xs bg-[#1a3a8f] text-white font-black py-3.5 rounded-2xl shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 transition-all border-none cursor-pointer"
+              style={{fontFamily:"Nunito,sans-serif"}}>
+              Upgrade to Pro — $7/mo →
+            </button>
           </div>
-        </div>
+        ) : (
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-3">Songs in this pack</div>
+            <div className="flex flex-col gap-2">
+              {pack.songs.map((song, i) => (
+                <SongRowWithArt
+                  key={song.title}
+                  song={song}
+                  index={i}
+                  done={completedSongs.has(song.title)}
+                  adding={adding === song.title}
+                  packColor={pack.color}
+                  onAdd={() => {
+                    onAddSong(song, pack.instrument);
+                    setAdding(song.title);
+                    setTimeout(() => setAdding(null), 1500);
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
+        {!locked && (
         <div className="px-6 py-4 border-t border-[#dde4f5] flex items-center justify-between flex-shrink-0 bg-[#fafbff]">
           <span className="text-sm text-[#6b7a9e]">
             {isStarted ? `${pack.songs.length - completedSongs.size} remaining` : `${pack.songs.length} songs to learn`}
@@ -787,13 +856,14 @@ function PackModal({ pack, onClose, onStart, isStarted, completedSongs, onAddSon
             </button>
           )}
         </div>
+        )}
       </div>
     </div>
   );
 }
 
 // ── MAIN ──────────────────────────────────────────────────────
-export default function Packs({ songs, onAddSong }) {
+export default function Packs({ songs, onAddSong, isPro = false }) {
   const [filter, setFilter] = useState("all");
   const [openPack, setOpenPack] = useState(null);
   const [startedPacks, setStartedPacks] = useState(new Set());
@@ -808,7 +878,11 @@ export default function Packs({ songs, onAddSong }) {
     return Math.round((getCompletedSongs(pack).size / pack.songs.length) * 100);
   }
 
-  function handleAddSong(song) {
+  function handlePackOpen(pack) {
+    setOpenPack(pack);
+  }
+
+  function handleAddSong(song, packInstrument) {
     onAddSong({
       id: Date.now(),
       title: song.title,
@@ -820,6 +894,7 @@ export default function Packs({ songs, onAddSong }) {
       notes: "",
       parts: [],
       structure: [],
+      instrument: packInstrument || null,
     });
   }
 
@@ -833,15 +908,33 @@ export default function Packs({ songs, onAddSong }) {
 
   const myPacks = ALL_PACKS.filter(p => startedPacks.has(p.id) || getCompletedSongs(p).size > 0);
   const browsePacks = ALL_PACKS.filter(p => filter === "all" || p.type === filter);
+  const proCount = ALL_PACKS.filter(p => p.pro).length;
 
   return (
     <div>
+      {!isPro && (
+        <div className="mb-6 bg-gradient-to-r from-[#1a3a8f] to-[#4a72e8] rounded-2xl p-4 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 text-white"><path d="M12 1C8.676 1 6 3.676 6 7v1H4v15h16V8h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 110 4 2 2 0 010-4z"/></svg>
+            </div>
+            <div>
+              <div className="text-white font-black text-sm" style={{fontFamily:"Nunito,sans-serif"}}>{proCount} packs are Pro-only</div>
+              <div className="text-white/70 text-xs">Upgrade to unlock all artist & band packs</div>
+            </div>
+          </div>
+          <button className="flex-shrink-0 bg-white text-[#1a3a8f] font-black text-xs px-4 py-2 rounded-xl border-none cursor-pointer hover:bg-[#e8eeff] transition-all" style={{fontFamily:"Nunito,sans-serif"}}>
+            Upgrade to Pro $7/mo →
+          </button>
+        </div>
+      )}
+
       {myPacks.length > 0 && (
         <div className="mb-10">
           <h3 className="font-black text-base text-[#0d1b3e] mb-4" style={{ fontFamily:"Nunito,sans-serif" }}>My Packs</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {myPacks.map(pack => (
-              <PackCard key={pack.id} pack={pack} onOpen={setOpenPack} isStarted progress={getProgress(pack)} />
+              <PackCard key={pack.id} pack={pack} onOpen={handlePackOpen} isStarted progress={getProgress(pack)} isPro={isPro} />
             ))}
           </div>
         </div>
@@ -850,7 +943,7 @@ export default function Packs({ songs, onAddSong }) {
       <div className="flex items-center justify-between mb-5">
         <div>
           <h3 className="font-black text-base text-[#0d1b3e]" style={{ fontFamily:"Nunito,sans-serif" }}>Browse Packs</h3>
-          <p className="text-xs text-[#6b7a9e]">{browsePacks.length} packs</p>
+          <p className="text-xs text-[#6b7a9e]">{browsePacks.length} packs · <span className="text-amber-500 font-bold">{browsePacks.filter(p=>p.pro).length} Pro</span></p>
         </div>
         <div className="flex gap-2 flex-wrap">
           {filters.map(f => (
@@ -866,9 +959,9 @@ export default function Packs({ songs, onAddSong }) {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
         {browsePacks.map(pack => (
-          <PackCard key={pack.id} pack={pack} onOpen={setOpenPack}
+          <PackCard key={pack.id} pack={pack} onOpen={handlePackOpen}
             isStarted={startedPacks.has(pack.id) || getCompletedSongs(pack).size > 0}
-            progress={getProgress(pack)} />
+            progress={getProgress(pack)} isPro={isPro} />
         ))}
       </div>
 
@@ -879,7 +972,8 @@ export default function Packs({ songs, onAddSong }) {
           onStart={p => setStartedPacks(prev => new Set([...prev, p.id]))}
           isStarted={startedPacks.has(openPack.id) || getCompletedSongs(openPack).size > 0}
           completedSongs={getCompletedSongs(openPack)}
-          onAddSong={handleAddSong}
+          onAddSong={openPack.pro && !isPro ? null : handleAddSong}
+          isPro={isPro}
         />
       )}
     </div>

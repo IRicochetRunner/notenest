@@ -74,11 +74,16 @@ function StepSearch({ onSelect }) {
     setLoading(true);
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(
-          `/api/itunes?term=${encodeURIComponent(query)}&limit=8`
-        );
-        const data = await res.json();
-        setResults(data.results || []);
+        let results = [];
+        try {
+          const r1 = await fetch(`/api/itunes?term=${encodeURIComponent(query)}&limit=8`);
+          if (r1.ok) { const d = await r1.json(); results = d.results || []; }
+        } catch(e) {}
+        if (!results.length) {
+          const r2 = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=8&media=music`);
+          const d = await r2.json(); results = d.results || [];
+        }
+        setResults(results);
       } catch(e) {
         setResults([]);
       } finally { setLoading(false); }
@@ -214,12 +219,24 @@ function StepConfirm({ song, onBack, onNext }) {
 }
 
 // ── STEP 3: RATE + NOTES ─────────────────────────────────────
+function inferInstrumentFromSkills(skills) {
+  const bassSkills = ["Slap Bass","Bassline","Fingerstyle","Walking bass","Melodic bass","Groove"];
+  const drumSkills = ["Groove","Fills","Rudiments","Hi-hat","Kick"];
+  const s = skills.join(" ");
+  if (bassSkills.some(b => s.includes(b))) return "Bass";
+  if (drumSkills.some(d => s.includes(d))) return "Drums";
+  return "Guitar";
+}
+
 function StepRate({ song, skills, onBack, onSave }) {
   const [rating, setRating] = useState(0);
   const [progress, setProgress] = useState(50);
   const [notes, setNotes] = useState("");
   const [hovered, setHovered] = useState(0);
+  const [instrument, setInstrument] = useState(() => inferInstrumentFromSkills(skills));
   const art = song.artworkUrl100?.replace("100x100bb","400x400bb");
+
+  const INSTRUMENTS = ["Guitar","Bass","Ukulele","Banjo","Mandolin","Piano","Drums","Other"];
 
   // Auto-populate from iTunes data
   const duration = song.trackTimeMillis ? parseFloat((song.trackTimeMillis / 60000).toFixed(2)) : null;
@@ -247,6 +264,20 @@ function StepRate({ song, skills, onBack, onSave }) {
         </div>
         <div className="flex flex-wrap gap-1 max-w-[140px]">
           {skills.slice(0,2).map(s => <span key={s} className="text-[10px] font-bold bg-[#e8eeff] text-[#1a3a8f] px-2 py-0.5 rounded-full">{s}</span>)}
+        </div>
+      </div>
+
+      {/* Instrument selector */}
+      <div className="mb-4">
+        <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-2">Instrument <span className="normal-case font-normal text-[#4a72e8]">· auto-detected</span></div>
+        <div className="flex flex-wrap gap-2">
+          {INSTRUMENTS.map(i => (
+            <button key={i} onClick={() => setInstrument(i)}
+              className={"text-xs font-bold px-3 py-1.5 rounded-full border-[1.5px] cursor-pointer transition-all " +
+                (instrument === i ? "bg-[#1a3a8f] border-[#1a3a8f] text-white" : "bg-white border-[#dde4f5] text-[#6b7a9e] hover:border-[#4a72e8]")}>
+              {i}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -319,7 +350,7 @@ function StepRate({ song, skills, onBack, onSave }) {
       </div>
 
       <button
-        onClick={() => onSave({ rating, progress, notes, duration, genre })}
+        onClick={() => onSave({ rating, progress, notes, duration, genre, instrument })}
         disabled={rating === 0}
         className={"w-full py-3.5 font-black rounded-2xl border-none transition-all text-sm " + (rating > 0 ? "bg-[#1a3a8f] text-white shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#0f2460] cursor-pointer" : "bg-[#dde4f5] text-[#6b7a9e] cursor-not-allowed")}
         style={{ fontFamily:"Nunito, sans-serif" }}>
@@ -360,7 +391,7 @@ export default function LogSongModal({ onClose, onAdd }) {
 
   const handleSelect = (s) => { setSong(s); setStep(2); };
   const handleConfirm = (sk) => { setSkills(sk); setStep(3); };
-  const handleSave = ({ rating, progress, notes, duration, genre }) => {
+  const handleSave = ({ rating, progress, notes, duration, genre, instrument }) => {
     const newSong = {
       id: Date.now(),
       title: song.trackName,
@@ -371,6 +402,7 @@ export default function LogSongModal({ onClose, onAdd }) {
       notes,
       genre: genre || song.primaryGenreName || null,
       duration: duration || null,
+      instrument: instrument || null,
       date: new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" }),
       artworkUrl: song.artworkUrl100?.replace("100x100bb","400x400bb"),
     };

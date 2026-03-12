@@ -58,6 +58,33 @@ function StructureIcon({ className }) {
     </svg>
   );
 }
+function TrophyIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>;
+}
+function FlameIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/></svg>;
+}
+function BookOpenIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>;
+}
+function TargetIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
+}
+function SparkleIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l.7 2.1 2.1.7-2.1.7L5 24l-.7-2.1L2.2 21l2.1-.7L5 19z"/></svg>;
+}
+function GuitarIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>;
+}
+function CameraIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>;
+}
+function ZapIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>;
+}
+function LockIcon({ className }) {
+  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>;
+}
 
 // ── DATA ─────────────────────────────────────────────────────
 const INIT_SONGS = [
@@ -93,21 +120,25 @@ function useAlbumArt(query) {
     if (artCache[query]) { setArt(artCache[query]); return; }
 
     // Use iTunes search with a small delay to avoid rate limiting
-    const timer = setTimeout(() => {
-      fetch(
-        `/api/itunes?term=${encodeURIComponent(query)}&limit=3`
-      )
-        .then((r) => r.json())
-        .then((d) => {
-          const result = d.results?.find(r => r.artworkUrl100) || d.results?.[0];
-          if (result?.artworkUrl100) {
-            const url = result.artworkUrl100
-              .replace("100x100bb", "600x600bb");
-            artCache[query] = url;
-            setArt(url);
-          }
-        })
-        .catch(() => {});
+    const timer = setTimeout(async () => {
+      try {
+        // Try proxy first (works on Vercel), fall back to direct (works locally)
+        let results = [];
+        try {
+          const res = await fetch(`/api/itunes?term=${encodeURIComponent(query)}&limit=3`);
+          if (res.ok) { const d = await res.json(); results = d.results || []; }
+        } catch(e) {}
+        if (!results.length) {
+          const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=3&media=music`);
+          const d = await res.json(); results = d.results || [];
+        }
+        const result = results.find(r => r.artworkUrl100) || results[0];
+        if (result?.artworkUrl100) {
+          const url = result.artworkUrl100.replace("100x100bb", "600x600bb");
+          artCache[query] = url;
+          setArt(url);
+        }
+      } catch(e) {}
     }, Math.random() * 500 + 100);
 
     return () => clearTimeout(timer);
@@ -118,7 +149,9 @@ function useAlbumArt(query) {
 
 // ── ALBUM ART IMAGE with fallback ────────────────────────────
 function AlbumArt({ song, className, fallbackClassName }) {
-  const art = useAlbumArt(song.title + " " + song.artist);
+  const stored = song.artwork_url || song.artworkUrl || null;
+  const fetched = useAlbumArt(stored ? null : (song.title + " " + song.artist));
+  const art = stored || fetched;
   const [failed, setFailed] = useState(false);
 
   if (art && !failed) {
@@ -326,8 +359,7 @@ function SongPartsTracker({ parts, structure, onUpdate }) {
 }
 
 // ── AI REC CARD ──────────────────────────────────────────────
-function AIRecCard() {
-  return (
+function AIRecCard() {  return (
     <div className="bg-white rounded-3xl border border-[#dde4f5] p-6 shadow-sm h-full flex flex-col">
       <div className="text-xs font-bold tracking-widest uppercase text-[#4a72e8] mb-4">AI Pick For You</div>
       <div className="flex gap-4 items-start mb-4">
@@ -354,15 +386,61 @@ function AIRecCard() {
 }
 
 // ── SONG GRID CARD ───────────────────────────────────────────
-function SongGridCard({ song, onClick, onStructureClick }) {
+function SongGridCard({ song, onClick, onStructureClick, onDelete }) {
+  const [ctxMenu, setCtxMenu] = useState(null);
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setCtxMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [ctxMenu]);
+
   return (
-    <div className="group flex flex-col">
-      {/* Album art square — clicking opens edit modal */}
+    <div className="group flex flex-col relative" onContextMenu={handleContextMenu}>
+      {/* Right-click context menu */}
+      {ctxMenu && (
+        <div
+          className="fixed z-50 bg-white border border-[#dde4f5] rounded-2xl shadow-xl py-1 min-w-[160px]"
+          style={{ top: ctxMenu.y, left: ctxMenu.x }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button onClick={() => { onClick(song); setCtxMenu(null); }}
+            className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0d1b3e] hover:bg-[#f0f4ff] transition-colors bg-transparent border-none cursor-pointer">
+            Edit song
+          </button>
+          <button onClick={() => { onStructureClick(song); setCtxMenu(null); }}
+            className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0d1b3e] hover:bg-[#f0f4ff] transition-colors bg-transparent border-none cursor-pointer">
+            View structure
+          </button>
+          <div className="border-t border-[#dde4f5] my-1" />
+          <button onClick={() => { onDelete(song); setCtxMenu(null); }}
+            className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors bg-transparent border-none cursor-pointer">
+            Delete from library
+          </button>
+        </div>
+      )}
+
+      {/* Album art square */}
       <div
         onClick={() => onClick(song)}
         className="relative aspect-square rounded-2xl overflow-hidden bg-[#e8eeff] mb-2 shadow-md group-hover:shadow-xl group-hover:-translate-y-1 transition-all duration-300 cursor-pointer"
       >
         <AlbumArt song={song} className="w-full h-full object-cover" fallbackClassName="w-full h-full" />
+
+        {/* Delete button on hover */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(song); }}
+          className="absolute top-2 right-2 z-20 w-7 h-7 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shadow-lg border-none cursor-pointer"
+          title="Delete"
+        >
+          <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
 
         <div className="absolute bottom-2 right-2 bg-black/70 backdrop-blur-sm text-white text-xs font-black px-2 py-1 rounded-lg flex items-center gap-1 z-10">
           <StarIcon className="w-3 h-3 text-amber-400" filled />{song.rating}
@@ -372,8 +450,6 @@ function SongGridCard({ song, onClick, onStructureClick }) {
             <CheckIcon className="w-3 h-3 text-white" />
           </div>
         )}
-
-        {/* Hover overlay — purely decorative, no click blocker */}
         <div className="absolute inset-0 bg-[#1a3a8f]/80 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col items-center justify-center gap-1.5 p-3 pointer-events-none">
           <div className="text-white font-black text-sm text-center leading-tight" style={{ fontFamily:"Nunito, sans-serif" }}>{song.title}</div>
           <div className="text-white/70 text-xs">{song.artist}</div>
@@ -389,11 +465,8 @@ function SongGridCard({ song, onClick, onStructureClick }) {
         </div>
       </div>
 
-      {/* Song info */}
       <div className="text-sm font-bold text-[#0d1b3e] truncate cursor-pointer" onClick={() => onClick(song)}>{song.title}</div>
       <div className="text-xs text-[#6b7a9e] truncate mb-2" onClick={() => onClick(song)}>{song.artist}</div>
-
-      {/* Structure button — always visible below the card */}
       <button
         onClick={() => onStructureClick(song)}
         className="w-full flex items-center justify-center gap-1.5 bg-[#e8eeff] hover:bg-[#1a3a8f] text-[#1a3a8f] hover:text-white text-[11px] font-bold py-1.5 rounded-xl border border-[#dde4f5] hover:border-[#1a3a8f] cursor-pointer transition-all"
@@ -406,7 +479,20 @@ function SongGridCard({ song, onClick, onStructureClick }) {
 }
 
 // ── SONG ROW (LIST VIEW) ─────────────────────────────────────
-function SongRow({ song, onClick, onStructureClick }) {
+function SongRow({ song, onClick, onStructureClick, onDelete }) {
+  const [ctxMenu, setCtxMenu] = useState(null);
+
+  const handleContextMenu = (e) => {
+    e.preventDefault();
+    setCtxMenu({ x: e.clientX, y: e.clientY });
+  };
+
+  useEffect(() => {
+    if (!ctxMenu) return;
+    const close = () => setCtxMenu(null);
+    window.addEventListener("click", close);
+    return () => window.removeEventListener("click", close);
+  }, [ctxMenu]);
   const keyColor = {
     "A":"bg-red-100 text-red-700","A#":"bg-orange-100 text-orange-700","Bb":"bg-orange-100 text-orange-700",
     "B":"bg-amber-100 text-amber-700","C":"bg-yellow-100 text-yellow-700","C#":"bg-lime-100 text-lime-700",
@@ -418,64 +504,88 @@ function SongRow({ song, onClick, onStructureClick }) {
   const kc = song.key ? (keyColor[song.key.replace(/m$/,"")] || "bg-[#e8eeff] text-[#1a3a8f]") : null;
 
   return (
-    <div className="flex items-center gap-4 px-4 py-3.5 rounded-2xl hover:bg-[#f0f4ff] transition-colors cursor-pointer group border border-transparent hover:border-[#dde4f5]">
+    <div onContextMenu={handleContextMenu} className="relative flex items-center w-full px-4 py-3.5 rounded-2xl hover:bg-[#f0f4ff] transition-colors cursor-pointer group border border-transparent hover:border-[#dde4f5]" style={{gap:"12px"}}>
+
+      {/* Right-click context menu */}
+      {ctxMenu && (
+        <div
+          className="fixed z-50 bg-white border border-[#dde4f5] rounded-2xl shadow-xl py-1 min-w-[160px]"
+          style={{ top: ctxMenu.y, left: ctxMenu.x }}
+          onClick={e => e.stopPropagation()}
+        >
+          <button onClick={() => { onClick(song); setCtxMenu(null); }}
+            className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0d1b3e] hover:bg-[#f0f4ff] transition-colors bg-transparent border-none cursor-pointer">
+            Edit song
+          </button>
+          <button onClick={() => { onStructureClick(song); setCtxMenu(null); }}
+            className="w-full text-left px-4 py-2.5 text-sm font-semibold text-[#0d1b3e] hover:bg-[#f0f4ff] transition-colors bg-transparent border-none cursor-pointer">
+            View structure
+          </button>
+          <div className="border-t border-[#dde4f5] my-1" />
+          <button onClick={() => { onDelete(song); setCtxMenu(null); }}
+            className="w-full text-left px-4 py-2.5 text-sm font-bold text-red-500 hover:bg-red-50 transition-colors bg-transparent border-none cursor-pointer">
+            Delete from library
+          </button>
+        </div>
+      )}
+
       {/* Album art */}
-      <div onClick={() => onClick(song)} className="w-14 h-14 rounded-2xl overflow-hidden bg-[#e8eeff] flex-shrink-0 shadow-md">
+      <div onClick={() => onClick(song)} style={{width:"48px",height:"48px",flexShrink:0}} className="rounded-xl overflow-hidden bg-[#e8eeff] shadow-md">
         <AlbumArt song={song} className="w-full h-full object-cover" fallbackClassName="w-full h-full" />
       </div>
 
-      {/* Title + artist */}
-      <div onClick={() => onClick(song)} className="w-44 flex-shrink-0 min-w-0">
+      {/* Title + artist — takes all remaining space */}
+      <div onClick={() => onClick(song)} style={{flex:"1 1 0",minWidth:0,maxWidth:"200px"}}>
         <div className="font-black text-sm text-[#0d1b3e] truncate mb-0.5" style={{ fontFamily:"Nunito,sans-serif" }}>{song.title}</div>
         <div className="text-xs text-[#6b7a9e] truncate">{song.artist}</div>
       </div>
 
       {/* Skills */}
-      <div onClick={() => onClick(song)} className="hidden sm:flex flex-wrap gap-1 w-36 flex-shrink-0">
+      <div onClick={() => onClick(song)} style={{width:"120px",flexShrink:0}} className="hidden sm:flex flex-wrap gap-1">
         {song.skills.slice(0,2).map((s) => <span key={s} className="text-[10px] font-bold bg-[#e8eeff] text-[#1a3a8f] px-2 py-0.5 rounded-full">{s}</span>)}
         {song.skills.length > 2 && <span className="text-[10px] font-bold text-[#6b7a9e]">+{song.skills.length - 2}</span>}
       </div>
 
+      {/* Instrument */}
+      <div onClick={() => onClick(song)} style={{width:"72px",flexShrink:0}} className="hidden lg:flex items-center">
+        {song.instrument
+          ? <span className="text-[10px] font-bold bg-[#f0f4ff] text-[#1a3a8f] px-2 py-0.5 rounded-full border border-[#dde4f5]">{song.instrument}</span>
+          : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
+      </div>
+
       {/* Key */}
-      <div onClick={() => onClick(song)} className="hidden lg:flex w-16 flex-shrink-0 justify-center">
-        {song.key
-          ? <span className={"text-xs font-black px-2.5 py-1 rounded-lg " + kc}>{song.key}</span>
+      <div onClick={() => onClick(song)} style={{width:"48px",flexShrink:0}} className="hidden lg:flex justify-center">
+        {song.key ? <span className={"text-xs font-black px-2 py-0.5 rounded-lg " + kc}>{song.key}</span>
           : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
       </div>
 
       {/* BPM */}
-      <div onClick={() => onClick(song)} className="hidden lg:flex w-16 flex-shrink-0 justify-center">
-        {song.bpm
-          ? <span className="text-xs font-bold text-[#0d1b3e]">{song.bpm} <span className="text-[#6b7a9e] font-medium">bpm</span></span>
+      <div onClick={() => onClick(song)} style={{width:"56px",flexShrink:0}} className="hidden lg:flex justify-center">
+        {song.bpm ? <span className="text-xs font-bold text-[#0d1b3e]">{song.bpm}<span className="text-[#6b7a9e] font-medium"> bpm</span></span>
           : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
       </div>
 
-      {/* Tuning + Capo */}
-      <div onClick={() => onClick(song)} className="hidden xl:flex flex-col gap-0.5 w-28 flex-shrink-0">
-        {song.tuning
-          ? <span className="text-xs font-bold text-[#0d1b3e]">{song.tuning}</span>
-          : <span className="text-xs text-[#dde4f5]">Standard</span>}
-        {song.capo > 0
-          ? <span className="text-[10px] text-[#6b7a9e] font-medium">Capo {song.capo}</span>
-          : <span className="text-[10px] text-[#dde4f5]">No capo</span>}
+      {/* Tuning / Capo */}
+      <div onClick={() => onClick(song)} style={{width:"72px",flexShrink:0}} className="hidden xl:flex flex-col gap-0.5">
+        {song.tuning ? <span className="text-xs font-bold text-[#0d1b3e]">{song.tuning}</span>
+          : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
+        {song.capo > 0 && <span className="text-[10px] text-[#6b7a9e] font-medium">Capo {song.capo}</span>}
       </div>
 
       {/* Genre */}
-      <div onClick={() => onClick(song)} className="hidden xl:block w-24 flex-shrink-0">
-        {song.genre
-          ? <span className="text-xs font-bold bg-[#f0f4ff] text-[#6b7a9e] px-2.5 py-1 rounded-full">{song.genre}</span>
+      <div onClick={() => onClick(song)} style={{width:"68px",flexShrink:0}} className="hidden xl:flex items-center">
+        {song.genre ? <span className="text-[10px] font-bold bg-[#f0f4ff] text-[#6b7a9e] px-2 py-0.5 rounded-full truncate">{song.genre}</span>
           : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
       </div>
 
-      {/* Duration */}
-      <div onClick={() => onClick(song)} className="hidden xl:block w-16 flex-shrink-0 text-center">
-        {song.duration
-          ? <span className="text-xs font-bold text-[#0d1b3e]">{Math.floor(song.duration)}:{String(Math.round((song.duration%1)*60)).padStart(2,"0")}</span>
+      {/* Length */}
+      <div onClick={() => onClick(song)} style={{width:"44px",flexShrink:0}} className="hidden xl:flex justify-center">
+        {song.duration ? <span className="text-xs font-bold text-[#0d1b3e]">{Math.floor(song.duration)}:{String(Math.round((song.duration%1)*60)).padStart(2,"00")}</span>
           : <span className="text-xs text-[#dde4f5] font-bold">—</span>}
       </div>
 
       {/* Progress */}
-      <div onClick={() => onClick(song)} className="w-24 flex-shrink-0 hidden md:block">
+      <div onClick={() => onClick(song)} style={{width:"88px",flexShrink:0}} className="hidden md:block">
         <div className="flex justify-between text-[10px] font-semibold text-[#6b7a9e] mb-1">
           <span className="font-bold text-[#0d1b3e]">{song.progress}%</span>
           {song.progress === 100 && <span className="text-green-600 font-bold">✓</span>}
@@ -485,21 +595,41 @@ function SongRow({ song, onClick, onStructureClick }) {
         </div>
       </div>
 
-      {/* Stars */}
-      <div onClick={() => onClick(song)} className="flex items-center gap-0.5 flex-shrink-0">
-        {[1,2,3,4,5].map((n) => <StarIcon key={n} className={"w-3.5 h-3.5 "+(n<=song.rating?"text-amber-400":"text-[#dde4f5]")} filled={n<=song.rating} />)}
+      {/* Difficulty */}
+      <div onClick={() => onClick(song)} style={{width:"88px",flexShrink:0}} className="flex items-center gap-0.5 justify-center">
+        {song.rating > 0
+          ? [1,2,3,4,5].map((n) => (
+              <svg key={n} viewBox="0 0 24 24" style={{width:"14px",height:"14px"}} fill={n <= song.rating ? "#f59e0b" : "none"} stroke={n <= song.rating ? "#f59e0b" : "#dde4f5"} strokeWidth="2">
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+              </svg>
+            ))
+          : <span className="text-xs text-[#dde4f5] font-bold">—</span>
+        }
       </div>
 
       {/* Date added */}
-      <div onClick={() => onClick(song)} className="text-xs text-[#6b7a9e] flex-shrink-0 hidden lg:block w-14 text-right font-medium">{song.date}</div>
+      <div onClick={() => onClick(song)} style={{width:"52px",flexShrink:0}} className="hidden lg:block text-right">
+        <span className="text-xs text-[#6b7a9e] font-medium">{song.date}</span>
+      </div>
 
       {/* Structure button */}
       <button
         onClick={(e) => { e.stopPropagation(); onStructureClick(song); }}
-        className="flex-shrink-0 flex items-center gap-1.5 bg-[#e8eeff] hover:bg-[#1a3a8f] text-[#1a3a8f] hover:text-white text-[11px] font-bold px-3 py-2 rounded-xl border border-[#dde4f5] cursor-pointer transition-all opacity-0 group-hover:opacity-100"
+        style={{width:"32px",height:"32px",flexShrink:0}}
+        className="flex items-center justify-center bg-[#e8eeff] hover:bg-[#1a3a8f] text-[#1a3a8f] hover:text-white rounded-xl border border-[#dde4f5] cursor-pointer transition-all opacity-0 group-hover:opacity-100"
+        title="View structure"
       >
-        <StructureIcon className="w-3 h-3" />
-        Structure
+        <StructureIcon className="w-3.5 h-3.5" />
+      </button>
+
+      {/* Delete button */}
+      <button
+        onClick={(e) => { e.stopPropagation(); onDelete(song); }}
+        style={{width:"32px",height:"32px",flexShrink:0}}
+        className="flex items-center justify-center bg-red-50 hover:bg-red-500 text-red-400 hover:text-white rounded-xl border border-red-100 hover:border-red-500 cursor-pointer transition-all opacity-0 group-hover:opacity-100"
+        title="Delete"
+      >
+        <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
       </button>
     </div>
   );
@@ -663,10 +793,50 @@ function SongModal({ song, onClose, onUpdate, onOpenStructure }) {
   const [rating,   setRating]   = useState(song.rating);
   const [progress, setProgress] = useState(song.progress);
   const [notes,    setNotes]    = useState(song.notes || "");
+  const [key,      setKey]      = useState(song.key || "");
+  const [bpm,      setBpm]      = useState(song.bpm || "");
+  const [tuning,   setTuning]   = useState(song.tuning || "");
+  const [capo,     setCapo]     = useState(song.capo || 0);
+  const [instrument, setInstrument] = useState(song.instrument || "Guitar");
+  const [attachments, setAttachments] = useState(song.attachments || []);
+  const [uploading, setUploading] = useState(false);
+  const attachInputRef = useRef();
   const [saved,    setSaved]    = useState(false);
 
+  const INSTRUMENTS = ["Guitar","Bass","Ukulele","Banjo","Mandolin","Piano","Drums","Other"];
+  const KEYS = ["","C","C#","Db","D","D#","Eb","E","F","F#","Gb","G","G#","Ab","A","A#","Bb","B","Cm","C#m","Dm","D#m","Ebm","Em","Fm","F#m","Gm","G#m","Am","A#m","Bbm","Bm"];
+
+  const isPro = false; // wire to billing when ready
+  const attachLimit = isPro ? Infinity : 1;
+
+  const handleAttachFiles = (e) => {
+    const files = Array.from(e.target.files);
+    const remaining = attachLimit - attachments.length;
+    if (remaining <= 0) return;
+    const allowed = files.slice(0, remaining);
+    setUploading(true);
+    const readers = allowed.map(file => new Promise(resolve => {
+      const reader = new FileReader();
+      reader.onload = ev => resolve({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        dataUrl: ev.target.result,
+        addedAt: new Date().toISOString(),
+      });
+      reader.readAsDataURL(file);
+    }));
+    Promise.all(readers).then(newFiles => {
+      setAttachments(prev => [...prev, ...newFiles]);
+      setUploading(false);
+    });
+    e.target.value = "";
+  };
+
+  const removeAttachment = (i) => setAttachments(prev => prev.filter((_,idx) => idx !== i));
+
   const save = () => {
-    onUpdate({ ...song, rating, progress, notes });
+    onUpdate({ ...song, rating, progress, notes, key, bpm: bpm ? parseInt(bpm) : null, tuning, capo: capo ? parseInt(capo) : 0, instrument, attachments });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
@@ -701,6 +871,66 @@ function SongModal({ song, onClose, onUpdate, onOpenStructure }) {
             </div>
           </div>
 
+          {/* Song details — Key, BPM, Tuning, Capo */}
+          <div>
+            <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-3">Song details</div>
+            <div className="grid grid-cols-2 gap-3">
+              {/* Key */}
+              <div>
+                <label className="text-xs font-bold text-[#0d1b3e] mb-1 block">Key</label>
+                <select value={key} onChange={e => setKey(e.target.value)}
+                  className="w-full px-3 py-2.5 border-[1.5px] border-[#dde4f5] rounded-xl text-sm text-[#0d1b3e] bg-[#f0f4ff] outline-none focus:border-[#4a72e8] transition-all cursor-pointer"
+                  style={{ fontFamily:"Plus Jakarta Sans, sans-serif" }}>
+                  {KEYS.map(k => <option key={k} value={k}>{k || "— Select key"}</option>)}
+                </select>
+              </div>
+              {/* BPM */}
+              <div>
+                <label className="text-xs font-bold text-[#0d1b3e] mb-1 block">BPM</label>
+                <input type="number" min="40" max="300" value={bpm} onChange={e => setBpm(e.target.value)}
+                  placeholder="e.g. 120"
+                  className="w-full px-3 py-2.5 border-[1.5px] border-[#dde4f5] rounded-xl text-sm text-[#0d1b3e] bg-[#f0f4ff] outline-none focus:border-[#4a72e8] transition-all"
+                  style={{ fontFamily:"Plus Jakarta Sans, sans-serif" }} />
+              </div>
+              {/* Tuning */}
+              <div>
+                <label className="text-xs font-bold text-[#0d1b3e] mb-1 block">Tuning</label>
+                <select value={tuning} onChange={e => setTuning(e.target.value)}
+                  className="w-full px-3 py-2.5 border-[1.5px] border-[#dde4f5] rounded-xl text-sm text-[#0d1b3e] bg-[#f0f4ff] outline-none focus:border-[#4a72e8] transition-all cursor-pointer"
+                  style={{ fontFamily:"Plus Jakarta Sans, sans-serif" }}>
+                  {["","Standard (EADGBe)","Drop D","Open G","Open D","Open E","Open A","DADGAD","Half Step Down","Full Step Down","Drop C","Drop B"].map(t => (
+                    <option key={t} value={t}>{t || "— Select tuning"}</option>
+                  ))}
+                </select>
+              </div>
+              {/* Capo */}
+              <div>
+                <label className="text-xs font-bold text-[#0d1b3e] mb-1 block">Capo</label>
+                <select value={capo} onChange={e => setCapo(e.target.value)}
+                  className="w-full px-3 py-2.5 border-[1.5px] border-[#dde4f5] rounded-xl text-sm text-[#0d1b3e] bg-[#f0f4ff] outline-none focus:border-[#4a72e8] transition-all cursor-pointer"
+                  style={{ fontFamily:"Plus Jakarta Sans, sans-serif" }}>
+                  {[0,1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                    <option key={n} value={n}>{n === 0 ? "No capo" : `Fret ${n}`}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Instrument */}
+            <div className="mt-3">
+              <label className="text-xs font-bold text-[#0d1b3e] mb-2 block">Instrument</label>
+              <div className="flex flex-wrap gap-2">
+                {INSTRUMENTS.map(i => (
+                  <button key={i} onClick={() => setInstrument(i)}
+                    className={"text-xs font-bold px-3 py-1.5 rounded-full border-[1.5px] cursor-pointer transition-all " +
+                      (instrument === i ? "bg-[#1a3a8f] border-[#1a3a8f] text-white" : "bg-white border-[#dde4f5] text-[#6b7a9e] hover:border-[#4a72e8]")}>
+                    {i}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
           {/* Rating */}
           <div>
             <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-2">Your rating</div>
@@ -732,11 +962,491 @@ function SongModal({ song, onClose, onUpdate, onOpenStructure }) {
               style={{ fontFamily:"Plus Jakarta Sans, sans-serif" }} />
           </div>
 
+          {/* Attachments */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider">Attachments</div>
+                {!isPro && (
+                  <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">
+                    Free: {attachments.length}/{attachLimit}
+                  </span>
+                )}
+              </div>
+              <button onClick={() => attachments.length < attachLimit && attachInputRef.current?.click()}
+                disabled={uploading || attachments.length >= attachLimit}
+                className={"flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border-none cursor-pointer transition-all " + (attachments.length >= attachLimit ? "text-[#b0baca] bg-[#f0f4ff] cursor-not-allowed" : "text-[#1a3a8f] bg-[#e8eeff] hover:bg-[#dde4f5]")}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="w-3.5 h-3.5">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/>
+                </svg>
+                {uploading ? "Uploading…" : attachments.length >= attachLimit ? "Limit reached" : "Add file"}
+              </button>
+              <input ref={attachInputRef} type="file" multiple accept="image/*,video/*,.pdf,.doc,.docx,.txt,.mp3,.wav"
+                className="hidden" onChange={handleAttachFiles}/>
+            </div>
+            {!isPro && attachments.length >= attachLimit && (
+              <div className="mb-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 flex items-center justify-between gap-3">
+                <span className="text-xs text-amber-700 font-bold">Free plan allows 1 attachment per song</span>
+                <button className="text-xs font-black text-[#1a3a8f] bg-white border border-[#dde4f5] px-3 py-1 rounded-lg cursor-pointer hover:bg-[#e8eeff] transition-all border-none">Upgrade to Pro</button>
+              </div>
+            )}
+
+            {attachments.length === 0 ? (
+              <button onClick={() => attachInputRef.current?.click()}
+                className="w-full py-6 border-2 border-dashed border-[#dde4f5] rounded-2xl flex flex-col items-center gap-2 text-[#b0baca] hover:border-[#4a72e8] hover:text-[#4a72e8] hover:bg-[#f0f4ff] transition-all cursor-pointer bg-transparent">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" className="w-7 h-7">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span className="text-xs font-bold">Photos, videos, PDFs, audio…</span>
+              </button>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {attachments.map((a, i) => {
+                  const isImage = a.type?.startsWith("image/");
+                  const isVideo = a.type?.startsWith("video/");
+                  const isAudio = a.type?.startsWith("audio/");
+                  const sizeMB  = (a.size / 1024 / 1024).toFixed(1);
+                  return (
+                    <div key={i} className="bg-[#f0f4ff] rounded-xl border border-[#dde4f5] overflow-hidden">
+                      {/* Image preview */}
+                      {isImage && (
+                        <img src={a.dataUrl} alt={a.name} className="w-full max-h-48 object-cover"/>
+                      )}
+                      {/* Video preview */}
+                      {isVideo && (
+                        <video src={a.dataUrl} controls className="w-full max-h-48 bg-black"/>
+                      )}
+                      {/* Audio preview */}
+                      {isAudio && (
+                        <div className="px-3 pt-3">
+                          <audio src={a.dataUrl} controls className="w-full h-8"/>
+                        </div>
+                      )}
+                      {/* File info row */}
+                      <div className="flex items-center gap-2 px-3 py-2">
+                        <div className="flex-shrink-0">
+                          {isImage ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#4a72e8" strokeWidth="2" strokeLinecap="round" className="w-4 h-4"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+                          ) : isVideo ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2" strokeLinecap="round" className="w-4 h-4"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                          ) : isAudio ? (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#0891b2" strokeWidth="2" strokeLinecap="round" className="w-4 h-4"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                          ) : (
+                            <svg viewBox="0 0 24 24" fill="none" stroke="#6b7a9e" strokeWidth="2" strokeLinecap="round" className="w-4 h-4"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-xs font-bold text-[#0d1b3e] truncate">{a.name}</div>
+                          <div className="text-[10px] text-[#b0baca]">{sizeMB} MB</div>
+                        </div>
+                        <button onClick={() => removeAttachment(i)}
+                          className="w-6 h-6 rounded-full bg-white border border-[#dde4f5] flex items-center justify-center text-[#6b7a9e] hover:text-red-500 hover:border-red-300 transition-all cursor-pointer flex-shrink-0">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="w-3 h-3"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Add more */}
+                {attachments.length < attachLimit && (
+                <button onClick={() => attachInputRef.current?.click()}
+                  className="flex items-center justify-center gap-2 py-2.5 border-2 border-dashed border-[#dde4f5] rounded-xl text-xs font-bold text-[#6b7a9e] hover:border-[#4a72e8] hover:text-[#4a72e8] hover:bg-[#f0f4ff] transition-all cursor-pointer bg-transparent">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="w-3.5 h-3.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+                  Add more
+                </button>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Save */}
           <button onClick={save}
             className={"w-full py-3.5 font-black rounded-2xl border-none cursor-pointer transition-all text-sm "+(saved?"bg-green-500 text-white shadow-[0_4px_0_#15803d]":"bg-[#1a3a8f] text-white shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#0f2460]")}
             style={{ fontFamily:"Nunito, sans-serif" }}>
             {saved ? "✓ Saved!" : "Save changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PROFILE PANEL ────────────────────────────────────────────
+function computeAchievements(songs) {
+  const streak=calcStreak(songs), mastered=songs.filter(s=>s.progress===100).length,
+    total=songs.length, skills=new Set(songs.flatMap(s=>s.skills||[])).size,
+    rated=songs.filter(s=>s.rating>0).length, fiveStars=songs.filter(s=>s.rating===5).length,
+    instruments=new Set(songs.map(s=>s.instrument).filter(Boolean)).size,
+    genres=new Set(songs.map(s=>s.genre).filter(Boolean)).size;
+  return [
+    {id:"first_song", Icon:BookOpenIcon, color:"#4a72e8", bg:"#e8eeff", label:"First Note",      desc:"Log your first song",          max:1,  val:total,      xp:50  },
+    {id:"lib_5",      Icon:BookOpenIcon, color:"#7c3aed", bg:"#f3e8ff", label:"Growing Library", desc:"Log 5 songs",                  max:5,  val:total,      xp:100 },
+    {id:"lib_10",     Icon:BookOpenIcon, color:"#1a3a8f", bg:"#dde4f5", label:"Serious Learner", desc:"Log 10 songs",                 max:10, val:total,      xp:200 },
+    {id:"lib_25",     Icon:BookOpenIcon, color:"#d97706", bg:"#fef3c7", label:"Dedicated",       desc:"Log 25 songs",                 max:25, val:total,      xp:500 },
+    {id:"lib_50",     Icon:TrophyIcon,   color:"#dc2626", bg:"#fee2e2", label:"Legend",          desc:"Log 50 songs",                 max:50, val:total,      xp:1000},
+    {id:"first_master",Icon:SparkleIcon, color:"#16a34a", bg:"#dcfce7", label:"First Master",   desc:"Fully master a song",          max:1,  val:mastered,   xp:100 },
+    {id:"master_5",   Icon:SparkleIcon,  color:"#0891b2", bg:"#cffafe", label:"Diamond Hands",  desc:"Master 5 songs",               max:5,  val:mastered,   xp:300 },
+    {id:"master_10",  Icon:TrophyIcon,   color:"#d97706", bg:"#fef3c7", label:"Crowned",        desc:"Master 10 songs",              max:10, val:mastered,   xp:750 },
+    {id:"streak_3",   Icon:FlameIcon,    color:"#ea580c", bg:"#ffedd5", label:"On Fire",        desc:"3-day practice streak",        max:3,  val:streak,     xp:75  },
+    {id:"streak_7",   Icon:ZapIcon,      color:"#ca8a04", bg:"#fef9c3", label:"Weekly Warrior", desc:"7-day practice streak",        max:7,  val:streak,     xp:200 },
+    {id:"streak_30",  Icon:ZapIcon,      color:"#7c3aed", bg:"#f3e8ff", label:"Night Owl",      desc:"30-day practice streak",       max:30, val:streak,     xp:1000},
+    {id:"skills_3",   Icon:TargetIcon,   color:"#4a72e8", bg:"#e8eeff", label:"Multi-Skilled",  desc:"Track 3 different skills",     max:3,  val:skills,     xp:100 },
+    {id:"skills_7",   Icon:TargetIcon,   color:"#7c3aed", bg:"#f3e8ff", label:"Skill Master",   desc:"Track 7 different skills",     max:7,  val:skills,     xp:300 },
+    {id:"critic",     Icon:StarIcon,     color:"#d97706", bg:"#fef3c7", label:"The Critic",     desc:"Rate 5 songs",                 max:5,  val:rated,      xp:100 },
+    {id:"five_stars", Icon:StarIcon,     color:"#d97706", bg:"#fef9c3", label:"Perfectionist",  desc:"Give a song 5 stars",          max:1,  val:fiveStars,  xp:150 },
+    {id:"multi_inst", Icon:GuitarIcon,   color:"#0891b2", bg:"#cffafe", label:"Multi-Inst.",    desc:"Log songs on 2+ instruments",  max:2,  val:instruments,xp:200 },
+    {id:"genre_3",    Icon:TargetIcon,   color:"#16a34a", bg:"#dcfce7", label:"Genre Explorer", desc:"Log 3 different genres",       max:3,  val:genres,     xp:150 },
+  ].map(a=>({...a, earned:a.val>=a.max, pct:Math.min(100,Math.round((a.val/a.max)*100))}));
+}
+
+const XP_LEVELS=[0,100,300,600,1000,1500,2500,4000,6000,9000,15000];
+function getXpLevel(xp){
+  let level=1;
+  for(let i=1;i<XP_LEVELS.length;i++){if(xp>=XP_LEVELS[i])level=i+1;else break;}
+  const curr=XP_LEVELS[level-1]||0,next=XP_LEVELS[level]||XP_LEVELS[XP_LEVELS.length-1];
+  return{level,pct:Math.min(100,Math.round(((xp-curr)/(next-curr))*100)),nextXp:next-xp};
+}
+
+function ProfilePanel({ user, songs, onClose, onOpenSettings, onAvatarChange }) {
+  const [tab, setTab] = useState("overview");
+  const [avatarUrl, setAvatarUrl] = useState(() => localStorage.getItem("nn_avatar")||null);
+  const inputRef = useRef();
+  const stored = (() => { try{return JSON.parse(localStorage.getItem("nn_profile")||"{}");}catch{return{};} })();
+  const bio = localStorage.getItem("nn_bio")||"";
+
+  const displayName = user?.user_metadata?.username || stored.username || stored.name || "User";
+  const instrument  = stored.instrument ? stored.instrument.charAt(0).toUpperCase()+stored.instrument.slice(1) : null;
+  const level       = stored.level      ? stored.level.charAt(0).toUpperCase()+stored.level.slice(1)           : null;
+  const avatarLetter = displayName.charAt(0).toUpperCase();
+
+  const streak      = calcStreak(songs);
+  const mastered    = songs.filter(s=>s.progress===100).length;
+  const skillCount  = new Set(songs.flatMap(s=>s.skills||[])).size;
+  const avgRating   = songs.length ? (songs.reduce((a,s)=>a+(s.rating||0),0)/songs.length).toFixed(1) : "—";
+  const achievements = computeAchievements(songs);
+  const xp          = achievements.filter(a=>a.earned).reduce((s,a)=>s+a.xp,0);
+  const xpInfo      = getXpLevel(xp);
+  const earnedCount = achievements.filter(a=>a.earned).length;
+
+  const skillBreakdown = (() => {
+    const map={};
+    songs.forEach(sg=>(sg.skills||[]).forEach(sk=>{if(!map[sk])map[sk]={count:0,titles:[]};map[sk].count++;map[sk].titles.push(sg.title);}));
+    return Object.entries(map).sort((a,b)=>b[1].count-a[1].count).map(([label,{count,titles}])=>({label,count,titles}));
+  })();
+
+  const handleAvatarFile = (e) => {
+    const file=e.target.files[0]; if(!file) return;
+    const reader=new FileReader();
+    reader.onload=ev=>{localStorage.setItem("nn_avatar",ev.target.result);setAvatarUrl(ev.target.result);onAvatarChange?.(ev.target.result);};
+    reader.readAsDataURL(file);
+  };
+
+  const SKILL_COLORS=["#1a3a8f","#7c3aed","#0891b2","#16a34a","#d97706","#dc2626"];
+
+  return (
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40 bg-[#0d1b3e]/40 backdrop-blur-sm" onClick={onClose}/>
+
+      {/* Panel */}
+      <div className="fixed top-0 right-0 h-full w-full max-w-md z-50 bg-white shadow-2xl flex flex-col"
+        style={{animation:"slideInRight 0.28s cubic-bezier(0.22,1,0.36,1)"}}>
+
+        {/* Header */}
+        <div className="bg-gradient-to-br from-[#1a3a8f] to-[#4a72e8] px-5 pt-5 pb-0 flex-shrink-0 relative overflow-hidden">
+          <div className="absolute inset-0 opacity-10" style={{backgroundImage:"radial-gradient(circle at 2px 2px,white 1px,transparent 0)",backgroundSize:"20px 20px"}}/>
+          <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-16 translate-x-16"/>
+
+          {/* Close + settings */}
+          <div className="flex items-center justify-between mb-4 relative z-10">
+            <button onClick={onClose} className="w-8 h-8 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white border-none cursor-pointer transition-colors">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" className="w-4 h-4"><path d="M18 6L6 18M6 6l12 12"/></svg>
+            </button>
+            <button onClick={onOpenSettings} className="flex items-center gap-1.5 text-xs font-bold text-white/80 hover:text-white bg-white/10 hover:bg-white/20 px-3 py-1.5 rounded-full border-none cursor-pointer transition-all">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-3.5 h-3.5">
+                <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+              </svg>
+              Edit profile
+            </button>
+          </div>
+
+          {/* Avatar + name */}
+          <div className="flex items-end gap-4 relative z-10 mb-4">
+            <div className="relative group flex-shrink-0">
+              <div className="w-18 h-18 rounded-2xl border-3 border-white/30 overflow-hidden bg-white/20 flex items-center justify-center" style={{width:72,height:72}}>
+                {avatarUrl
+                  ? <img src={avatarUrl} alt="avatar" className="w-full h-full object-cover"/>
+                  : <span className="font-black text-3xl text-white" style={{fontFamily:"Nunito,sans-serif"}}>{avatarLetter}</span>}
+              </div>
+              <button onClick={()=>inputRef.current?.click()}
+                className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-md cursor-pointer border-none opacity-0 group-hover:opacity-100 transition-opacity">
+                <CameraIcon className="w-3 h-3 text-[#1a3a8f]"/>
+              </button>
+              <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarFile}/>
+            </div>
+            <div className="flex-1 min-w-0 pb-1">
+              <div className="font-black text-white text-xl truncate" style={{fontFamily:"Nunito,sans-serif"}}>@{displayName}</div>
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {instrument && <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">{instrument}</span>}
+                {level      && <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full">{level}</span>}
+                {streak>0   && <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-0.5 rounded-full flex items-center gap-1"><FlameIcon className="w-2.5 h-2.5"/>{streak}d streak</span>}
+              </div>
+              {bio && <p className="text-white/70 text-xs mt-1.5 line-clamp-2">{bio}</p>}
+            </div>
+          </div>
+
+          {/* XP bar */}
+          <div className="relative z-10 mb-0 pb-4">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-white/90 text-xs font-bold">Level {xpInfo.level} · {xp.toLocaleString()} XP</span>
+              <span className="text-white/50 text-[10px]">{xpInfo.nextXp>0?`${xpInfo.nextXp} to next`:"Max!"}</span>
+            </div>
+            <div className="h-2 bg-white/20 rounded-full overflow-hidden">
+              <div className="h-full bg-white rounded-full transition-all duration-700" style={{width:`${xpInfo.pct}%`}}/>
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex relative z-10 -mx-5 px-5 gap-0 border-t border-white/10 mt-0">
+            {[["overview","Overview"],["achievements","Badges"],["skills","Skills"]].map(([id,label])=>(
+              <button key={id} onClick={()=>setTab(id)}
+                className={"flex-1 py-3 text-xs font-bold border-none cursor-pointer transition-all border-b-2 "+
+                  (tab===id?"text-white border-white bg-transparent":"text-white/50 border-transparent bg-transparent hover:text-white/80")}
+                style={{fontFamily:"Nunito,sans-serif"}}>
+                {label}
+                {id==="achievements"&&earnedCount>0&&<span className="ml-1 bg-[#dde4f5] text-[#6b7a9e] text-[8px] font-black w-3.5 h-3.5 rounded-full inline-flex items-center justify-center">!</span>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto bg-[#f8f9ff]">
+
+          {/* ── OVERVIEW ── */}
+          {tab==="overview"&&(
+            <div className="p-4 flex flex-col gap-4">
+              {/* Stats grid */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  {val:songs.length,   label:"Songs",    Icon:BookOpenIcon, color:"#1a3a8f"},
+                  {val:skillCount,     label:"Skills",   Icon:TargetIcon,   color:"#7c3aed"},
+                  {val:mastered,       label:"Mastered", Icon:SparkleIcon,  color:"#16a34a"},
+                  {val:streak>0?`${streak}d`:"—", label:"Streak", Icon:FlameIcon, color:"#ea580c"},
+                  {val:avgRating,      label:"Avg rating",Icon:StarIcon,    color:"#d97706"},
+                  {val:`${earnedCount}/${achievements.length}`, label:"Badges", Icon:TrophyIcon, color:"#0891b2"},
+                ].map(({val,label,Icon,color})=>(
+                  <div key={label} className="bg-white rounded-2xl border border-[#dde4f5] p-4 flex flex-col items-center text-center gap-1.5 shadow-sm">
+                    <Icon className="w-5 h-5" style={{color}}/>
+                    <div className="font-black text-2xl leading-none" style={{color,fontFamily:"Nunito,sans-serif"}}>{val}</div>
+                    <div className="text-[10px] font-bold text-[#6b7a9e] uppercase tracking-wide">{label}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Recent songs */}
+              {songs.length>0&&(
+                <div>
+                  <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-2">Recent songs</div>
+                  <div className="flex flex-col gap-2">
+                    {songs.slice(0,5).map(s=>(
+                      <div key={s.id} className="flex items-center gap-3 bg-white rounded-xl border border-[#dde4f5] p-3 shadow-sm">
+                        <div className="w-9 h-9 rounded-lg bg-[#e8eeff] flex-shrink-0 overflow-hidden">
+                          {(s.artwork_url||s.artworkUrl)
+                            ? <img src={s.artwork_url||s.artworkUrl} alt="" className="w-full h-full object-cover"/>
+                            : <div className="w-full h-full flex items-center justify-center font-black text-sm text-[#1a3a8f]/40">{s.title[0]}</div>}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-xs text-[#0d1b3e] truncate">{s.title}</div>
+                          <div className="text-[10px] text-[#6b7a9e] truncate">{s.artist}</div>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <div className="w-10 h-1.5 bg-[#e8eeff] rounded-full overflow-hidden">
+                            <div className="h-full bg-[#1a3a8f] rounded-full" style={{width:`${s.progress||0}%`}}/>
+                          </div>
+                          <div className="text-[9px] text-[#b0baca] text-right mt-0.5">{s.progress||0}%</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── BADGES ── */}
+          {tab==="achievements"&&(
+            <div className="flex flex-col items-center justify-center h-full px-6 py-16 text-center">
+              <div className="w-20 h-20 rounded-3xl bg-[#f0f4ff] border-2 border-dashed border-[#dde4f5] flex items-center justify-center mb-5">
+                <TrophyIcon className="w-9 h-9 text-[#c0cadf]"/>
+              </div>
+              <div className="font-black text-xl text-[#0d1b3e] mb-2" style={{fontFamily:"Nunito,sans-serif"}}>Coming Soon</div>
+              <p className="text-sm text-[#6b7a9e] leading-relaxed max-w-[220px]">
+                Badges and achievements are on their way. Keep logging songs to be ready when they drop.
+              </p>
+            </div>
+          )}
+
+          {/* ── SKILLS ── */}
+          {tab==="skills"&&(
+            <div className="p-4">
+              <div className="text-xs font-bold text-[#6b7a9e] uppercase tracking-wider mb-3">Skills breakdown</div>
+              {skillBreakdown.length===0
+                ? <div className="text-sm text-[#6b7a9e] text-center py-10">No skills tracked yet.</div>
+                : <div className="flex flex-col gap-3">
+                    {skillBreakdown.map((sk,i)=>(
+                      <div key={sk.label} className="bg-white rounded-xl border border-[#dde4f5] p-4 shadow-sm">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm font-bold text-[#0d1b3e]">{sk.label}</span>
+                          <span className="text-xs font-bold" style={{color:SKILL_COLORS[i%SKILL_COLORS.length]}}>{sk.count} song{sk.count!==1?"s":""}</span>
+                        </div>
+                        <div className="h-2 bg-[#e8eeff] rounded-full overflow-hidden mb-2">
+                          <div className="h-full rounded-full transition-all" style={{width:`${Math.min(100,(sk.count/songs.length)*100)}%`,background:SKILL_COLORS[i%SKILL_COLORS.length]}}/>
+                        </div>
+                        <div className="flex flex-wrap gap-1">
+                          {sk.titles.slice(0,3).map(t=><span key={t} className="text-[9px] text-[#6b7a9e] bg-[#f0f4ff] px-2 py-0.5 rounded-full border border-[#dde4f5]">{t}</span>)}
+                          {sk.titles.length>3&&<span className="text-[9px] text-[#b0baca]">+{sk.titles.length-3}</span>}
+                        </div>
+                      </div>
+                    ))}
+                  </div>}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes slideInRight {
+          from { transform: translateX(100%); opacity: 0; }
+          to   { transform: translateX(0);    opacity: 1; }
+        }
+      `}</style>
+    </>
+  );
+}
+
+// ── SETTINGS MODAL ───────────────────────────────────────────
+function SettingsModal({ user, onClose, onSaved }) {
+  const stored = (() => { try { return JSON.parse(localStorage.getItem("nn_profile") || "{}"); } catch { return {}; } })();
+  const [username,   setUsername]   = useState(user?.user_metadata?.username || stored.username || "");
+  const [bio,        setBio]        = useState(localStorage.getItem("nn_bio") || "");
+  const [instrument, setInstrument] = useState(stored.instrument || "guitar");
+  const [level,      setLevel]      = useState(stored.level || "beginner");
+  const [saving,     setSaving]     = useState(false);
+  const [saved,      setSaved]      = useState(false);
+  const [error,      setError]      = useState("");
+
+  const INSTRUMENTS = ["Guitar","Bass","Ukulele","Banjo","Mandolin","Piano","Drums","Other"];
+  const LEVELS      = ["Beginner","Intermediate","Advanced","Professional"];
+
+  const handleSave = async () => {
+    if (username.trim().length < 3) { setError("Username must be at least 3 characters."); return; }
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) { setError("Username can only contain letters, numbers, and underscores."); return; }
+    setSaving(true); setError("");
+    try {
+      // Update Supabase profile
+      await supabase.from("profiles").update({
+        username: username.trim(),
+        bio: bio.trim(),
+        instrument: instrument.toLowerCase(),
+        level: level.toLowerCase(),
+      }).eq("id", user.id);
+
+      // Update auth metadata
+      await supabase.auth.updateUser({ data: { username: username.trim() } });
+
+      // Update localStorage
+      const profile = { ...stored, username: username.trim(), instrument: instrument.toLowerCase(), level: level.toLowerCase() };
+      localStorage.setItem("nn_profile", JSON.stringify(profile));
+      localStorage.setItem("nn_bio", bio.trim());
+
+      setSaved(true);
+      setTimeout(() => { setSaved(false); onSaved({ username: username.trim(), instrument, level, bio }); onClose(); }, 1200);
+    } catch(e) {
+      setError("Failed to save. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d1b3e]/60 backdrop-blur-md p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-[#dde4f5]">
+          <div>
+            <h2 className="font-black text-xl text-[#0d1b3e]" style={{fontFamily:"Nunito,sans-serif"}}>Profile settings</h2>
+            <p className="text-xs text-[#6b7a9e] mt-0.5">{user?.email}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-[#f0f4ff] flex items-center justify-center text-[#6b7a9e] hover:bg-[#e8eeff] border-none cursor-pointer text-sm">✕</button>
+        </div>
+
+        <div className="p-6 flex flex-col gap-4">
+
+          {/* Avatar */}
+          <div className="flex items-center gap-4 mb-1">
+            <div className="w-16 h-16 bg-[#1a3a8f] rounded-2xl flex items-center justify-center text-white font-black text-2xl flex-shrink-0" style={{fontFamily:"Nunito,sans-serif"}}>
+              {username.charAt(0).toUpperCase() || "?"}
+            </div>
+            <div>
+              <div className="text-sm font-bold text-[#0d1b3e]">@{username || "username"}</div>
+              <div className="text-xs text-[#6b7a9e]">{instrument} · {level}</div>
+            </div>
+          </div>
+
+          {/* Username */}
+          <div>
+            <label className="text-xs font-bold text-[#0d1b3e] uppercase tracking-wider mb-1.5 block">Username</label>
+            <div className="flex items-center border-[1.5px] border-[#dde4f5] rounded-xl bg-[#f0f4ff] focus-within:border-[#4a72e8] transition-all overflow-hidden">
+              <span className="pl-3 text-sm text-[#6b7a9e] font-bold">@</span>
+              <input value={username} onChange={e => setUsername(e.target.value.replace(/[^a-zA-Z0-9_]/g,""))}
+                className="flex-1 px-2 py-2.5 bg-transparent outline-none text-sm text-[#0d1b3e]"
+                placeholder="your_username"
+                style={{fontFamily:"Plus Jakarta Sans,sans-serif"}} />
+            </div>
+          </div>
+
+          {/* Bio */}
+          <div>
+            <label className="text-xs font-bold text-[#0d1b3e] uppercase tracking-wider mb-1.5 block">Bio</label>
+            <textarea value={bio} onChange={e => setBio(e.target.value)} rows={3}
+              placeholder="Tell people about your musical journey..."
+              className="w-full px-3 py-2.5 border-[1.5px] border-[#dde4f5] rounded-xl text-sm text-[#0d1b3e] bg-[#f0f4ff] outline-none focus:border-[#4a72e8] transition-all resize-none placeholder:text-[#b0baca]"
+              style={{fontFamily:"Plus Jakarta Sans,sans-serif"}} />
+          </div>
+
+          {/* Instrument + Level */}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-bold text-[#0d1b3e] uppercase tracking-wider mb-1.5 block">Instrument</label>
+              <select value={instrument} onChange={e => setInstrument(e.target.value)}
+                className="w-full px-3 py-2.5 border-[1.5px] border-[#dde4f5] rounded-xl text-sm text-[#0d1b3e] bg-[#f0f4ff] outline-none focus:border-[#4a72e8] transition-all cursor-pointer"
+                style={{fontFamily:"Plus Jakarta Sans,sans-serif"}}>
+                {INSTRUMENTS.map(i => <option key={i} value={i.toLowerCase()}>{i}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-[#0d1b3e] uppercase tracking-wider mb-1.5 block">Level</label>
+              <select value={level} onChange={e => setLevel(e.target.value)}
+                className="w-full px-3 py-2.5 border-[1.5px] border-[#dde4f5] rounded-xl text-sm text-[#0d1b3e] bg-[#f0f4ff] outline-none focus:border-[#4a72e8] transition-all cursor-pointer"
+                style={{fontFamily:"Plus Jakarta Sans,sans-serif"}}>
+                {LEVELS.map(l => <option key={l} value={l.toLowerCase()}>{l}</option>)}
+              </select>
+            </div>
+          </div>
+
+          {error && <p className="text-xs text-red-500 font-bold">{error}</p>}
+
+          {/* Save */}
+          <button onClick={handleSave} disabled={saving}
+            className={"w-full py-3.5 font-black rounded-2xl border-none cursor-pointer transition-all text-sm mt-1 " +
+              (saved ? "bg-green-500 text-white shadow-[0_4px_0_#15803d]" :
+               saving ? "bg-[#dde4f5] text-[#6b7a9e] cursor-not-allowed" :
+               "bg-[#1a3a8f] text-white shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 hover:shadow-[0_6px_0_#0f2460]")}
+            style={{fontFamily:"Nunito,sans-serif"}}>
+            {saved ? "✓ Saved!" : saving ? "Saving..." : "Save changes"}
           </button>
         </div>
       </div>
@@ -811,23 +1521,20 @@ export default function Dashboard({ darkMode, setDarkMode }) {
   const [user, setUser] = useState(null);
   const [loadingSongs, setLoadingSongs] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
   const dark = darkMode;
 
   // ── AUTH + DATA LOADING ──────────────────────────────────
   useEffect(() => {
-    // Get current session
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) loadSongs(session.user.id);
-      else { window.location.href = "/"; }
+      if (session?.user) {
+        setUser(session.user);
+        loadSongs(session.user.id);
+      } else {
+        window.location.href = "/";
+      }
     });
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) loadSongs(session.user.id);
-      else { setSongs(INIT_SONGS); setLoadingSongs(false); }
-    });
-    return () => subscription.unsubscribe();
   }, []);
 
   async function loadSongs(userId) {
@@ -837,9 +1544,48 @@ export default function Dashboard({ darkMode, setDarkMode }) {
       .select("*")
       .eq("user_id", userId)
       .order("created_at", { ascending: false });
-    if (!error && data) setSongs(data);
-    else setSongs(INIT_SONGS);
+    if (!error && data) {
+      setSongs(data);
+      // Enrich songs missing metadata in the background
+      enrichSongs(data, userId);
+    } else setSongs(INIT_SONGS);
     setLoadingSongs(false);
+  }
+
+  async function enrichSongs(songs, userId) {
+    const missing = songs.filter(s => !s.genre && !s.duration);
+    if (!missing.length) return;
+    const updates = {};
+    for (const song of missing) {
+      try {
+        const query = encodeURIComponent(`${song.title} ${song.artist}`);
+        let results = [];
+        try {
+          const r = await fetch(`/api/itunes?term=${query}&limit=1`);
+          if (r.ok) { const d = await r.json(); results = d.results || []; }
+        } catch(e) {}
+        if (!results.length) {
+          try {
+            const r = await fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=1&media=music`);
+            const d = await r.json(); results = d.results || [];
+          } catch(e) {}
+        }
+        const match = results[0];
+        if (!match) continue;
+        const u = {
+          genre: match.primaryGenreName || null,
+          duration: match.trackTimeMillis ? parseFloat((match.trackTimeMillis / 60000).toFixed(2)) : null,
+          artwork_url: match.artworkUrl100?.replace("100x100bb", "600x600bb") || song.artwork_url || null,
+        };
+        await supabase.from("songs").update(u).eq("id", song.id);
+        updates[song.id] = u;
+        await new Promise(r => setTimeout(r, 300));
+      } catch(e) {}
+    }
+    // Single batched state update instead of one per song
+    if (Object.keys(updates).length > 0) {
+      setSongs(prev => prev.map(s => updates[s.id] ? { ...s, ...updates[s.id], artworkUrl: updates[s.id].artwork_url } : s));
+    }
   }
 
   async function handleSignOut() {
@@ -851,6 +1597,13 @@ export default function Dashboard({ darkMode, setDarkMode }) {
   const username   = user?.user_metadata?.username || getUsername() || "there";
   const displayName = username.charAt(0).toUpperCase() + username.slice(1);
   const avatarLetter = username.charAt(0).toUpperCase() || "?";
+  const [navAvatarUrl, setNavAvatarUrl] = useState(() => localStorage.getItem("nn_avatar") || null);
+  // Keep nav avatar in sync when profile panel updates it
+  useEffect(() => {
+    const onStorage = () => setNavAvatarUrl(localStorage.getItem("nn_avatar") || null);
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
   const streak     = calcStreak(songs);
   const skillCount = countUniqueSkills(songs);
   const mastered   = songs.filter(s => s.progress === 100).length;
@@ -870,6 +1623,17 @@ export default function Dashboard({ darkMode, setDarkMode }) {
     });
   }, [songs, search, filterSkill, filterRating]);
 
+  const [confirmDelete, setConfirmDelete] = useState(null); // song to delete
+
+  const deleteSong = async (song) => {
+    setSongs(prev => prev.filter(s => s.id !== song.id));
+    setConfirmDelete(null);
+    if (selected?.id === song.id) setSelected(null);
+    if (user) {
+      await supabase.from("songs").delete().eq("id", song.id).eq("user_id", user.id);
+    }
+  };
+
   const addSong = async (newSong) => {
     if (user) {
       const { data, error } = await supabase.from("songs").insert({
@@ -883,8 +1647,12 @@ export default function Dashboard({ darkMode, setDarkMode }) {
         date: newSong.date || new Date().toLocaleDateString("en-US", { month:"short", day:"numeric" }),
         parts: newSong.parts || [],
         structure: newSong.structure || [],
+        genre: newSong.genre || null,
+        duration: newSong.duration || null,
+        artwork_url: newSong.artworkUrl || null,
+        instrument: newSong.instrument || null,
       }).select().single();
-      if (!error && data) setSongs(prev => [data, ...prev]);
+      if (!error && data) setSongs(prev => [{ ...data, artworkUrl: data.artwork_url }, ...prev]);
     } else {
       setSongs(prev => [{ ...newSong, id: Date.now() }, ...prev]);
     }
@@ -899,6 +1667,10 @@ export default function Dashboard({ darkMode, setDarkMode }) {
         skills: updated.skills || [], rating: updated.rating || 0,
         progress: updated.progress || 0, notes: updated.notes || "",
         parts: updated.parts || [], structure: updated.structure || [],
+        key: updated.key || null, bpm: updated.bpm || null,
+        tuning: updated.tuning || null, capo: updated.capo || 0,
+        instrument: updated.instrument || null,
+        attachments: updated.attachments || [],
       }).eq("id", updated.id).eq("user_id", user.id);
     }
   };
@@ -924,21 +1696,38 @@ export default function Dashboard({ darkMode, setDarkMode }) {
       <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage:"linear-gradient(rgba(26,58,143,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(26,58,143,.03) 1px,transparent 1px)", backgroundSize:"48px 48px" }} />
 
       {/* NAV */}
-      <nav className={"sticky top-0 z-40 backdrop-blur-xl border-b px-8 py-4 flex items-center justify-between transition-colors duration-300 "+navBg}>
-        <a href="/" className={"flex items-center gap-2.5 no-underline "+(dark?"text-white":"text-[#1a3a8f]")}>
-          <div className="w-8 h-8 bg-[#1a3a8f] rounded-xl flex items-center justify-center shadow-md">
-            <MusicIcon className="w-4 h-4 text-white" />
+      <nav className={"sticky top-0 z-40 backdrop-blur-xl border-b px-8 py-5 flex items-center justify-between transition-colors duration-300 "+navBg}>
+        <a href="/" className={"flex items-center gap-3 no-underline "+(dark?"text-white":"text-[#1a3a8f]")}>
+          <div className="w-10 h-10 bg-[#1a3a8f] rounded-xl flex items-center justify-center shadow-md">
+            <MusicIcon className="w-5 h-5 text-white" />
           </div>
-          <span className="font-black text-xl" style={{ fontFamily:"Nunito, sans-serif" }}>NoteNest</span>
+          <span className="font-black text-2xl" style={{ fontFamily:"Nunito, sans-serif" }}>NoteNest</span>
         </a>
-        <div className="flex items-center gap-3">
-          <button onClick={() => setShowLog(true)} className="flex items-center gap-2 bg-[#1a3a8f] text-white font-black px-5 py-2.5 rounded-xl shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 transition-all border-none cursor-pointer text-sm" style={{ fontFamily:"Nunito, sans-serif" }}>
+        <div className="flex items-center gap-4">
+          <button onClick={() => setShowLog(true)} className="flex items-center gap-2 bg-[#1a3a8f] text-white font-black px-6 py-3 rounded-xl shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 transition-all border-none cursor-pointer text-sm" style={{ fontFamily:"Nunito, sans-serif" }}>
             <PlusIcon className="w-4 h-4" /> Log a song
           </button>
           {user ? (
-            <div className="flex items-center gap-2">
-              <a href={`/profile/@${username}`} title="View profile" className="w-9 h-9 bg-[#1a3a8f] rounded-full flex items-center justify-center text-white font-black text-sm cursor-pointer no-underline hover:bg-[#4a72e8] transition-colors">{avatarLetter}</a>
-              <button onClick={handleSignOut} className="text-xs font-bold text-[#6b7a9e] hover:text-[#1a3a8f] bg-transparent border-none cursor-pointer transition-colors">Sign out</button>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setShowProfile(true)} title="View profile"
+                className="flex items-center gap-2.5 bg-transparent border-none cursor-pointer group">
+                <div className="w-11 h-11 rounded-full overflow-hidden border-2 border-[#dde4f5] group-hover:border-[#4a72e8] transition-all shadow-sm flex-shrink-0 bg-[#1a3a8f] flex items-center justify-center">
+                  {navAvatarUrl
+                    ? <img src={navAvatarUrl} alt="avatar" className="w-full h-full object-cover"/>
+                    : <span className="font-black text-lg text-white" style={{fontFamily:"Nunito,sans-serif"}}>{avatarLetter}</span>}
+                </div>
+                <span className={"text-sm font-bold transition-colors hidden md:block " + (dark ? "text-white/80 group-hover:text-white" : "text-[#0d1b3e] group-hover:text-[#4a72e8]")}
+                  style={{fontFamily:"Nunito,sans-serif"}}>
+                  @{username}
+                </span>
+              </button>
+              <button onClick={() => setShowSettings(true)} title="Settings"
+                className={"w-9 h-9 rounded-full flex items-center justify-center transition-all bg-transparent border-none cursor-pointer " + (dark ? "text-white/50 hover:text-white hover:bg-white/10" : "text-[#6b7a9e] hover:text-[#1a3a8f] hover:bg-[#e8eeff]")}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                  <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/>
+                </svg>
+              </button>
+              <button onClick={handleSignOut} className={"text-sm font-bold bg-transparent border-none cursor-pointer transition-colors " + (dark ? "text-white/50 hover:text-white" : "text-[#6b7a9e] hover:text-[#1a3a8f]")}>Sign out</button>
             </div>
           ) : (
             <button onClick={() => setShowAuth(true)} className="text-sm font-bold text-[#1a3a8f] bg-[#e8eeff] px-4 py-2.5 rounded-xl border-none cursor-pointer hover:bg-[#1a3a8f] hover:text-white transition-all">
@@ -974,6 +1763,24 @@ export default function Dashboard({ darkMode, setDarkMode }) {
           </div>
           <AIRecCard />
         </div>
+
+        {/* FREE TIER AD BANNER */}
+        {!false /* replace with !isPro when billing is wired */ && (
+          <div className="mb-5 bg-white border border-[#dde4f5] rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-[#f0f4ff] rounded-xl flex items-center justify-center flex-shrink-0">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#4a72e8" strokeWidth="2" strokeLinecap="round" className="w-4 h-4"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 9h18"/></svg>
+              </div>
+              <div>
+                <span className="text-xs font-bold text-[#0d1b3e]">You're on the Free plan</span>
+                <span className="text-xs text-[#6b7a9e] ml-2">· 1 attachment per song · 9 Pro packs locked</span>
+              </div>
+            </div>
+            <button className="flex-shrink-0 bg-[#1a3a8f] text-white font-black text-xs px-4 py-2 rounded-xl border-none cursor-pointer hover:bg-[#4a72e8] transition-all" style={{fontFamily:"Nunito,sans-serif"}}>
+              Upgrade to Pro $7/mo
+            </button>
+          </div>
+        )}
 
         {/* TABS */}
         <div className="flex items-center justify-between mb-6">
@@ -1046,7 +1853,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
             {view === "grid" ? (
               <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-7 xl:grid-cols-9 2xl:grid-cols-11 gap-5">
                 {filteredSongs.map((s) => (
-                  <SongGridCard key={s.id} song={s} onClick={setSelected} onStructureClick={setStructureSong} />
+                  <SongGridCard key={s.id} song={s} onClick={setSelected} onStructureClick={setStructureSong} onDelete={setConfirmDelete} />
                 ))}
                 <div className="group cursor-pointer">
                   <div className="aspect-square rounded-2xl border-2 border-dashed border-[#dde4f5] flex flex-col items-center justify-center gap-2 hover:border-[#4a72e8] hover:bg-[#f0f4ff] transition-all">
@@ -1057,22 +1864,23 @@ export default function Dashboard({ darkMode, setDarkMode }) {
               </div>
             ) : (
               <div className="bg-white rounded-3xl border border-[#dde4f5] p-3 shadow-sm">
-                <div className="flex items-center gap-4 px-4 pb-3 mb-1 border-b border-[#dde4f5] text-[10px] font-bold text-[#6b7a9e] uppercase tracking-wider">
-                  <div className="w-14 flex-shrink-0" />
-                  <div className="w-44 flex-shrink-0">Song</div>
-                  <div className="hidden sm:block w-36 flex-shrink-0">Skills</div>
-                  <div className="hidden lg:block w-16 flex-shrink-0 text-center">Key</div>
-                  <div className="hidden lg:block w-16 flex-shrink-0 text-center">BPM</div>
-                  <div className="hidden xl:block w-28 flex-shrink-0">Tuning / Capo</div>
-                  <div className="hidden xl:block w-24 flex-shrink-0">Genre</div>
-                  <div className="hidden xl:block w-16 flex-shrink-0 text-center">Length</div>
-                  <div className="hidden md:block w-24 flex-shrink-0">Progress</div>
-                  <div className="flex-shrink-0 w-24 text-center">Rating</div>
-                  <div className="hidden lg:block w-14 flex-shrink-0 text-right">Added</div>
-                  <div className="w-24 flex-shrink-0" />
+                <div className="flex items-center w-full px-4 pb-3 mb-1 border-b border-[#dde4f5] text-[10px] font-bold text-[#6b7a9e] uppercase tracking-wider" style={{gap:"12px"}}>
+                  <div style={{width:"48px",flexShrink:0}} />
+                  <div style={{flex:"1 1 0",minWidth:0,maxWidth:"200px"}}>Song</div>
+                  <div style={{width:"120px",flexShrink:0}} className="hidden sm:block">Skills</div>
+                  <div style={{width:"72px",flexShrink:0}} className="hidden lg:block">Instrument</div>
+                  <div style={{width:"48px",flexShrink:0}} className="hidden lg:block text-center">Key</div>
+                  <div style={{width:"56px",flexShrink:0}} className="hidden lg:block text-center">BPM</div>
+                  <div style={{width:"72px",flexShrink:0}} className="hidden xl:block">Tuning/Capo</div>
+                  <div style={{width:"68px",flexShrink:0}} className="hidden xl:block">Genre</div>
+                  <div style={{width:"44px",flexShrink:0}} className="hidden xl:block text-center">Length</div>
+                  <div style={{width:"88px",flexShrink:0}} className="hidden md:block">Progress</div>
+                  <div style={{width:"88px",flexShrink:0}} className="text-center">Difficulty</div>
+                  <div style={{width:"52px",flexShrink:0}} className="hidden lg:block text-right">Added</div>
+                  <div style={{width:"76px",flexShrink:0}} />
                 </div>
                 {filteredSongs.map((s) => (
-                  <SongRow key={s.id} song={s} onClick={setSelected} onStructureClick={setStructureSong} />
+                  <SongRow key={s.id} song={s} onClick={setSelected} onStructureClick={setStructureSong} onDelete={setConfirmDelete} />
                 ))}
               </div>
             )}
@@ -1138,12 +1946,12 @@ export default function Dashboard({ darkMode, setDarkMode }) {
 
         {/* SETLISTS TAB */}
         {tab === "setlists" && (
-          <div>
+          <div key="setlists-tab">
             <div className="mb-5">
               <h2 className={"font-black text-2xl "+text} style={{ fontFamily:"Nunito, sans-serif" }}>Setlist builder</h2>
               <p className={"text-sm "+muted}>Build setlists from your song library</p>
             </div>
-            <SetlistBuilder songs={songs} dark={dark} />
+            <SetlistBuilder key="setlist-builder" songs={songs} dark={dark} />
           </div>
         )}
 
@@ -1154,7 +1962,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
               <h2 className="font-black text-2xl text-[#0d1b3e]" style={{ fontFamily:"Nunito, sans-serif" }}>Learning Packs</h2>
               <p className="text-sm text-[#6b7a9e]">Curated song collections to guide your learning journey</p>
             </div>
-            <Packs songs={songs} onAddSong={addSong} />
+            <Packs songs={songs} onAddSong={addSong} isPro={false} />
           </div>
         )}
       </div>
@@ -1162,7 +1970,38 @@ export default function Dashboard({ darkMode, setDarkMode }) {
       {/* ── MODALS ── */}
       {selected && <SongModal song={selected} onClose={() => setSelected(null)} onUpdate={updateSong} onOpenStructure={setStructureSong} />}
       {showLog   && <LogSongModal onClose={() => setShowLog(false)} onAdd={addSong} />}
+
+      {/* Confirm delete modal */}
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d1b3e]/60 backdrop-blur-md p-4"
+          onClick={() => setConfirmDelete(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl p-6" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-12 bg-red-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <svg viewBox="0 0 24 24" className="w-6 h-6 text-red-500" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+            </div>
+            <h3 className="font-black text-xl text-[#0d1b3e] text-center mb-1" style={{ fontFamily:"Nunito,sans-serif" }}>Remove song?</h3>
+            <p className="text-sm text-[#6b7a9e] text-center mb-6">
+              <strong className="text-[#0d1b3e]">{confirmDelete.title}</strong> by {confirmDelete.artist} will be permanently removed from your library.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setConfirmDelete(null)}
+                className="flex-1 py-3 bg-[#f0f4ff] text-[#0d1b3e] font-bold rounded-2xl border-none cursor-pointer hover:bg-[#e8eeff] transition-colors text-sm">
+                Cancel
+              </button>
+              <button onClick={() => deleteSong(confirmDelete)}
+                className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-black rounded-2xl border-none cursor-pointer transition-colors text-sm shadow-[0_4px_0_#dc2626]"
+                style={{ fontFamily:"Nunito,sans-serif" }}>
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {showAuth  && <AuthModal onClose={() => setShowAuth(false)} onAuth={setUser} />}
+      {showProfile && user && <ProfilePanel user={user} songs={songs} onClose={() => setShowProfile(false)} onAvatarChange={setNavAvatarUrl} onOpenSettings={() => { setShowProfile(false); setShowSettings(true); }} />}
+      {showSettings && user && <SettingsModal user={user} onClose={() => setShowSettings(false)} onSaved={(p) => {
+        setUser(prev => ({ ...prev, user_metadata: { ...prev?.user_metadata, username: p.username } }));
+      }} />}
 
       {/* Song Structure Diagram */}
       {structureSong && (
