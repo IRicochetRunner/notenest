@@ -1666,6 +1666,9 @@ export default function Dashboard({ darkMode, setDarkMode }) {
     const priceId = plan === "annual"
       ? "price_1TA28sRvo6SdBTINe0u6jkdx"
       : "price_1TA289Rvo6SdBTINrbtmTyS7";
+
+    const newTab = window.open("", "_blank");
+
     try {
       const res = await fetch("/api/create-checkout", {
         method: "POST",
@@ -1674,11 +1677,13 @@ export default function Dashboard({ darkMode, setDarkMode }) {
       });
       const data = await res.json();
       if (data.url) {
-        window.open(data.url, "_blank");
+        newTab.location.href = data.url;
       } else {
+        newTab.close();
         alert("Checkout error: " + (data.error || "No URL returned"));
       }
     } catch (e) {
+      newTab.close();
       console.error("Checkout error:", e);
       alert("Checkout failed — check console for details");
     }
