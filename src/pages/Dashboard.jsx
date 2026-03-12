@@ -3,6 +3,46 @@ import { supabase } from "../supabase";
 import AuthModal from "../components/AuthModal";
 import LogSongModal from "./LogSongModal";
 import SetlistBuilder from "./SetlistBuilder";
+
+// Module-level flag — survives re-renders, resets on true page reload
+let _dashboardMounted = false;
+
+// ── PRO FLAG — now loaded from Supabase profiles ──
+// IS_PRO is kept as a fallback only during local dev, set to true to test
+const IS_PRO_DEV_OVERRIDE = false;
+
+// ── PRO GATE COMPONENT ───────────────────────────────────────
+function ProGate({ title, description, features, onUpgrade }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-16 px-8 text-center">
+      <div className="w-16 h-16 rounded-3xl bg-amber-50 border-2 border-amber-200 flex items-center justify-center mb-5">
+        <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 text-amber-500">
+          <path d="M12 1C8.676 1 6 3.676 6 7v1H4v15h16V8h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 110 4 2 2 0 010-4z"/>
+        </svg>
+      </div>
+      <div className="inline-flex items-center gap-1.5 bg-amber-50 border border-amber-200 text-amber-600 text-xs font-black px-3 py-1 rounded-full mb-3">
+        PRO FEATURE
+      </div>
+      <h3 className="font-black text-2xl text-[#0d1b3e] mb-2" style={{fontFamily:"Nunito,sans-serif"}}>{title}</h3>
+      <p className="text-sm text-[#6b7a9e] mb-6 max-w-sm leading-relaxed">{description}</p>
+      <div className="bg-[#f0f4ff] rounded-2xl p-4 w-full max-w-sm mb-6 text-left">
+        {features.map(f => (
+          <div key={f} className="flex items-center gap-2.5 py-1.5">
+            <div className="w-4 h-4 bg-[#1a3a8f] rounded-full flex items-center justify-center flex-shrink-0">
+              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" className="w-2 h-2"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <span className="text-xs font-bold text-[#0d1b3e]">{f}</span>
+          </div>
+        ))}
+      </div>
+      <button onClick={onUpgrade} className="w-full max-w-sm bg-[#1a3a8f] text-white font-black py-4 rounded-2xl shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 transition-all border-none cursor-pointer text-sm"
+        style={{fontFamily:"Nunito,sans-serif"}}>
+        Upgrade to Pro — $7/mo
+      </button>
+      <p className="text-xs text-[#b0baca] mt-3">Cancel anytime · $60/yr saves 37%</p>
+    </div>
+  );
+}
 import SongStructureDiagram from "../components/SongStructureDiagram";
 import Packs from "../components/Packs";
 
@@ -58,20 +98,20 @@ function StructureIcon({ className }) {
     </svg>
   );
 }
-function TrophyIcon({ className }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>;
+function TrophyIcon({ className, style }) {
+  return <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M11 3H4v5c0 2.757 1.74 5.12 4.2 6.027L7.5 17H6a1 1 0 000 2h12a1 1 0 000-2h-1.5l-.7-2.973C18.26 13.12 20 10.757 20 8V3h-7zm7 5c0 2.206-1.794 4-4 4h-.126C13.566 11.447 13.109 11 13 11h-2c-.109 0-.566.447-.874 1H10c-2.206 0-4-1.794-4-4V5h12v3zM7 3V2a1 1 0 012 0v1H7zm8 0V2a1 1 0 012 0v1h-2z"/></svg>;
 }
-function FlameIcon({ className }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 3z"/></svg>;
+function FlameIcon({ className, style }) {
+  return <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M17.66 11.2c-.23-.3-.51-.56-.77-.82-.67-.6-1.43-1.03-2.07-1.66C13.33 7.26 13 4.85 13.95 3c-1 .23-1.97.75-2.73 1.5-2.25 2.25-2.48 5.77-.72 8.31.13.19.14.44 0 .63-.14.2-.4.27-.61.17-.87-.42-1.62-1.17-2.1-2.07C7.33 12.37 7.29 13.56 7.8 14.6c.74 1.53 2.18 2.6 3.77 2.89C13.63 17.9 15.58 17.72 17 16.76c.67-.45 1.23-1.1 1.5-1.87.27-.76.23-1.6-.05-2.34-.34-.87-.83-1.6-1.79-1.35zm-4 8.05c-1.44.44-3.06.06-4.1-1.02-1.1-1.1-1.23-2.72-.7-4.1.47-.81.92-1.64.9-2.57-.02-.94-.35-1.83-.86-2.6C8.2 8.04 8.5 7 8.97 6.09c-.6.97-.77 2.13-.64 3.23.12.98.51 1.91 1.09 2.7.44.6.88 1.16.88 1.97 0 .46-.22.88-.58 1.17-.6.5-1.47.53-2.07.04-.22-.18-.5-.24-.76-.14-.26.1-.44.34-.44.62v.13c0 2.21 1.79 4 4 4h.1c1.65-.01 3.1-.94 3.76-2.36.4-.84.42-1.81.05-2.66-.23-.55-.63-1-1.15-1.3.36.67.52 1.45.33 2.21-.2.76-.7 1.44-1.38 1.84z"/></svg>;
 }
-function BookOpenIcon({ className }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>;
+function BookOpenIcon({ className, style }) {
+  return <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M19 2H9C7.35 2 6 3.35 6 5v2H5C3.35 7 2 8.35 2 10v11c0 .55.45 1 1 1h14c.55 0 1-.45 1-1v-2h1c1.65 0 3-1.35 3-3V5c0-1.65-1.35-3-3-3zM4 10c0-.55.45-1 1-1h1v8H5c-.37 0-.72.08-1 .22V10zm14 10H6v-1c0-.55.45-1 1-1h10c.55 0 1 .45 1 1v1zm3-4c0 .55-.45 1-1 1h-1V9c0-1.65-1.35-3-3-3H8V5c0-.55.45-1 1-1h10c.55 0 1 .45 1 1v11z"/></svg>;
 }
-function TargetIcon({ className }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>;
+function TargetIcon({ className, style }) {
+  return <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 2C6.49 2 2 6.49 2 12s4.49 10 10 10 10-4.49 10-10S17.51 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm3-8c0 1.66-1.34 3-3 3s-3-1.34-3-3 1.34-3 3-3 3 1.34 3 3zm-3-5c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5z"/></svg>;
 }
-function SparkleIcon({ className }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/><path d="M5 19l.7 2.1 2.1.7-2.1.7L5 24l-.7-2.1L2.2 21l2.1-.7L5 19z"/></svg>;
+function SparkleIcon({ className, style }) {
+  return <svg className={className} style={style} viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M19 9l1.25-2.75L23 5l-2.75-1.25L19 1l-1.25 2.75L15 5l2.75 1.25L19 9zm-7.5.5L9 4 6.5 9.5 1 12l5.5 2.5L9 20l2.5-5.5L17 12l-5.5-2.5zM19 15l-1.25 2.75L15 19l2.75 1.25L19 23l1.25-2.75L23 19l-2.75-1.25L19 15z"/></svg>;
 }
 function GuitarIcon({ className }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 3H5a2 2 0 00-2 2v4m6-6h10a2 2 0 012 2v4M9 3v18m0 0h10a2 2 0 002-2V9M9 21H5a2 2 0 01-2-2V9m0 0h18"/></svg>;
@@ -100,14 +140,98 @@ const INIT_SONGS = [
 
 const AI_REC = { title:"Tears in Heaven", artist:"Eric Clapton", level:"Intermediate", reason:"Based on your fingerpicking skills and love of emotional ballads", skills:["Fingerpicking","Chord Melody"] };
 
-const SKILL_DATA = [
-  { label:"Open Chords",    pct:88, color:"from-[#1a3a8f] to-[#4a72e8]", songs:["Wonderwall","Wish You Were Here","Knockin on Heavens Door"] },
-  { label:"Fingerpicking",  pct:72, color:"from-green-600 to-green-400",  songs:["Blackbird","Hotel California","Wish You Were Here","Stairway to Heaven"] },
-  { label:"Bassline/Groove",pct:65, color:"from-teal-700 to-teal-400",    songs:["Come As You Are"] },
-  { label:"Barre Chords",   pct:54, color:"from-amber-600 to-amber-400",  songs:["Hotel California","Stairway to Heaven"] },
-  { label:"Power Chords",   pct:40, color:"from-purple-700 to-purple-400",songs:["Seven Nation Army"] },
-  { label:"Lead Guitar",    pct:28, color:"from-rose-600 to-rose-400",    songs:["Stairway to Heaven"] },
+function SkillsTab({ songs, onSelectSong }) {
+  const skillData = buildSkillData(songs);
+  const [activeSkill, setActiveSkill] = useState(null);
+  const active = skillData.find(s => s.label === activeSkill);
+
+  if (skillData.length === 0) return (
+    <div className="text-center py-16 text-[#6b7a9e] text-sm">
+      No skills logged yet — add skills when logging songs to see your breakdown.
+    </div>
+  );
+
+  return (
+    <div className="flex flex-col lg:flex-row gap-5">
+      <div className="flex flex-col gap-3 lg:w-80 flex-shrink-0">
+        {skillData.map((sk) => (
+          <div key={sk.label}
+            onClick={() => setActiveSkill(activeSkill === sk.label ? null : sk.label)}
+            className={"bg-white rounded-2xl border p-5 shadow-sm cursor-pointer transition-all hover:-translate-y-0.5 hover:shadow-md " +
+              (activeSkill === sk.label ? "border-[#4a72e8] ring-2 ring-[#4a72e8]/20" : "border-[#dde4f5]")}>
+            <div className="flex justify-between text-sm font-semibold mb-2">
+              <span className="font-bold text-[#0d1b3e]">{sk.label}</span>
+              <span className="text-[#4a72e8] font-bold">{sk.pct}% · {sk.songs.length} song{sk.songs.length !== 1 ? "s" : ""}</span>
+            </div>
+            <div className="h-3 bg-[#e8eeff] rounded-full overflow-hidden">
+              <div className={"h-full rounded-full bg-gradient-to-r "+sk.color} style={{ width:sk.pct+"%" }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex-1">
+        {active ? (
+          <div className="bg-white rounded-2xl border border-[#dde4f5] p-5 shadow-sm">
+            <h3 className="font-black text-lg text-[#0d1b3e] mb-1" style={{fontFamily:"Nunito,sans-serif"}}>{active.label}</h3>
+            <p className="text-xs text-[#6b7a9e] mb-4">{active.songs.length} song{active.songs.length !== 1 ? "s" : ""} in your library build this skill</p>
+            <div className="flex flex-col gap-2">
+              {active.songs.map(s => (
+                <div key={s.id}
+                  onClick={() => onSelectSong(s)}
+                  className="flex items-center gap-3 p-3 rounded-xl border border-[#dde4f5] hover:border-[#4a72e8] hover:bg-[#f8f9ff] cursor-pointer transition-all">
+                  <div className="w-10 h-10 rounded-xl overflow-hidden flex-shrink-0">
+                    <AlbumArt song={s} className="w-full h-full object-cover" fallbackClassName="w-full h-full" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-bold text-sm text-[#0d1b3e] truncate">{s.title}</div>
+                    <div className="text-xs text-[#6b7a9e] truncate">{s.artist}</div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    {[1,2,3,4,5].map(n => <StarIcon key={n} className={"w-3 h-3 "+(n<=s.rating?"text-amber-400":"text-[#dde4f5]")} filled={n<=s.rating} />)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="h-full min-h-48 flex items-center justify-center rounded-2xl border-2 border-dashed border-[#dde4f5] text-[#6b7a9e] text-sm p-12 text-center">
+            Click a skill to see which songs in your library build it
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const SKILL_COLORS = [
+  "from-[#1a3a8f] to-[#4a72e8]",
+  "from-green-600 to-green-400",
+  "from-teal-700 to-teal-400",
+  "from-amber-600 to-amber-400",
+  "from-purple-700 to-purple-400",
+  "from-rose-600 to-rose-400",
+  "from-cyan-700 to-cyan-400",
+  "from-orange-600 to-orange-400",
 ];
+
+function buildSkillData(songs) {
+  const map = {};
+  songs.forEach(song => {
+    (song.skills || []).forEach(skill => {
+      if (!map[skill]) map[skill] = [];
+      map[skill].push(song);
+    });
+  });
+  const total = songs.length || 1;
+  return Object.entries(map)
+    .map(([label, skillSongs], i) => ({
+      label,
+      songs: skillSongs,
+      pct: Math.round((skillSongs.length / total) * 100),
+      color: SKILL_COLORS[i % SKILL_COLORS.length],
+    }))
+    .sort((a, b) => b.songs.length - a.songs.length);
+}
 
 // ── ALBUM ART CACHE (module-level so it persists across re-renders) ──────────
 const artCache = {};
@@ -806,7 +930,7 @@ function SongModal({ song, onClose, onUpdate, onOpenStructure }) {
   const INSTRUMENTS = ["Guitar","Bass","Ukulele","Banjo","Mandolin","Piano","Drums","Other"];
   const KEYS = ["","C","C#","Db","D","D#","Eb","E","F","F#","Gb","G","G#","Ab","A","A#","Bb","B","Cm","C#m","Dm","D#m","Ebm","Em","Fm","F#m","Gm","G#m","Am","A#m","Bbm","Bm"];
 
-  const isPro = false; // wire to billing when ready
+  const isPro = IS_PRO;
   const attachLimit = isPro ? Infinity : 1;
 
   const handleAttachFiles = (e) => {
@@ -943,14 +1067,24 @@ function SongModal({ song, onClose, onUpdate, onOpenStructure }) {
           </div>
 
           {/* Open Structure button */}
-          <button
-            onClick={() => { onClose(); onOpenStructure(song); }}
-            className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#dde4f5] rounded-2xl text-sm font-bold text-[#1a3a8f] hover:border-[#4a72e8] hover:bg-[#f0f4ff] transition-all cursor-pointer bg-transparent"
-            style={{ fontFamily:"Nunito, sans-serif" }}
-          >
-            <StructureIcon className="w-4 h-4" />
-            View / Edit Song Structure
-          </button>
+          {IS_PRO ? (
+            <button
+              onClick={() => { onClose(); onOpenStructure(song); }}
+              className="w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-[#dde4f5] rounded-2xl text-sm font-bold text-[#1a3a8f] hover:border-[#4a72e8] hover:bg-[#f0f4ff] transition-all cursor-pointer bg-transparent"
+              style={{ fontFamily:"Nunito, sans-serif" }}
+            >
+              <StructureIcon className="w-4 h-4" />
+              View / Edit Song Structure
+            </button>
+          ) : (
+            <div className="w-full flex items-center justify-between gap-3 py-3 px-4 border-2 border-dashed border-[#dde4f5] rounded-2xl bg-[#fafbff]">
+              <div className="flex items-center gap-2 text-sm font-bold text-[#b0baca]">
+                <StructureIcon className="w-4 h-4" />
+                Song Structure Diagram
+              </div>
+              <span className="text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-1 rounded-full flex-shrink-0">PRO</span>
+            </div>
+          )}
 
           {/* Notes */}
           <div>
@@ -1229,15 +1363,14 @@ function ProfilePanel({ user, songs, onClose, onOpenSettings, onAvatarChange }) 
               {/* Stats grid */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  {val:songs.length,   label:"Songs",    Icon:BookOpenIcon, color:"#1a3a8f"},
-                  {val:skillCount,     label:"Skills",   Icon:TargetIcon,   color:"#7c3aed"},
-                  {val:mastered,       label:"Mastered", Icon:SparkleIcon,  color:"#16a34a"},
-                  {val:streak>0?`${streak}d`:"—", label:"Streak", Icon:FlameIcon, color:"#ea580c"},
-                  {val:avgRating,      label:"Avg rating",Icon:StarIcon,    color:"#d97706"},
-                  {val:`${earnedCount}/${achievements.length}`, label:"Badges", Icon:TrophyIcon, color:"#0891b2"},
-                ].map(({val,label,Icon,color})=>(
-                  <div key={label} className="bg-white rounded-2xl border border-[#dde4f5] p-4 flex flex-col items-center text-center gap-1.5 shadow-sm">
-                    <Icon className="w-5 h-5" style={{color}}/>
+                  {val:songs.length,                              label:"Songs",     color:"#1a3a8f"},
+                  {val:skillCount,                                label:"Skills",    color:"#7c3aed"},
+                  {val:mastered,                                  label:"Mastered",  color:"#16a34a"},
+                  {val:streak>0?`${streak}d`:"—",                label:"Streak",    color:"#ea580c"},
+                  {val:avgRating,                                 label:"Avg rating",color:"#d97706"},
+                  {val:`${earnedCount}/${achievements.length}`,   label:"Badges",    color:"#0891b2"},
+                ].map(({val,label,color})=>(
+                  <div key={label} className="bg-white rounded-2xl border border-[#dde4f5] p-4 flex flex-col items-center text-center gap-1 shadow-sm">
                     <div className="font-black text-2xl leading-none" style={{color,fontFamily:"Nunito,sans-serif"}}>{val}</div>
                     <div className="text-[10px] font-bold text-[#6b7a9e] uppercase tracking-wide">{label}</div>
                   </div>
@@ -1515,10 +1648,36 @@ export default function Dashboard({ darkMode, setDarkMode }) {
   const [selected, setSelected] = useState(null);
   const [showLog, setShowLog] = useState(false);
   const [structureSong, setStructureSong] = useState(null);
+
+  // Prevent StrictMode / hot-reload duplicate mounts from showing double UI
+  const [ready, setReady] = useState(false);
+  useEffect(() => {
+    setReady(true);
+    return () => { setReady(false); };
+  }, []);
   const [search, setSearch] = useState("");
   const [filterSkill, setFilterSkill] = useState("All");
   const [filterRating, setFilterRating] = useState(0);
   const [user, setUser] = useState(null);
+  const [isPro, setIsPro] = useState(IS_PRO_DEV_OVERRIDE);
+  const IS_PRO = isPro;
+
+  async function handleUpgrade(plan = "monthly") {
+    const priceId = plan === "annual"
+      ? "price_1TA28sRvo6SdBTINe0u6jkdx"
+      : "price_1TA289Rvo6SdBTINrbtmTyS7";
+    try {
+      const res = await fetch("/api/create-checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId, userId: user?.id, email: user?.email }),
+      });
+      const data = await res.json();
+      if (data.url) window.location.href = data.url;
+    } catch (e) {
+      console.error("Checkout error:", e);
+    }
+  }
   const [loadingSongs, setLoadingSongs] = useState(true);
   const [showAuth, setShowAuth] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -1531,6 +1690,14 @@ export default function Dashboard({ darkMode, setDarkMode }) {
       if (session?.user) {
         setUser(session.user);
         loadSongs(session.user.id);
+        // Load pro status from Supabase
+        supabase.from("profiles").select("is_pro").eq("id", session.user.id).single()
+          .then(({ data }) => { if (data?.is_pro) setIsPro(true); });
+        // Handle redirect back from Stripe
+        if (window.location.search.includes("pro=success")) {
+          setIsPro(true);
+          window.history.replaceState({}, "", "/dashboard");
+        }
       } else {
         window.location.href = "/";
       }
@@ -1691,6 +1858,8 @@ export default function Dashboard({ darkMode, setDarkMode }) {
   const muted= dark ? "text-white/50" : "text-[#6b7a9e]";
   const navBg= dark ? "bg-[#0d1b3e]/90 border-white/10" : "bg-[#f0f4ff]/90 border-[#dde4f5]";
 
+  if (!ready) return null;
+
   return (
     <div className={"min-h-screen transition-colors duration-300 "+bg} style={{ fontFamily:"Plus Jakarta Sans, sans-serif" }}>
       <div className="fixed inset-0 pointer-events-none z-0" style={{ backgroundImage:"linear-gradient(rgba(26,58,143,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(26,58,143,.03) 1px,transparent 1px)", backgroundSize:"48px 48px" }} />
@@ -1765,7 +1934,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
         </div>
 
         {/* FREE TIER AD BANNER */}
-        {!false /* replace with !isPro when billing is wired */ && (
+        {!IS_PRO && (
           <div className="mb-5 bg-white border border-[#dde4f5] rounded-2xl px-5 py-3 flex items-center justify-between gap-4 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 bg-[#f0f4ff] rounded-xl flex items-center justify-center flex-shrink-0">
@@ -1890,31 +2059,70 @@ export default function Dashboard({ darkMode, setDarkMode }) {
         {/* ACTIVITY TAB */}
         {tab === "activity" && (
           <div>
-            <div className="mb-5">
-              <h2 className="font-black text-2xl text-[#0d1b3e]" style={{ fontFamily:"Nunito, sans-serif" }}>Song diary</h2>
-              <p className="text-[#6b7a9e] text-sm">Your learning history</p>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="font-black text-2xl text-[#0d1b3e]" style={{ fontFamily:"Nunito, sans-serif" }}>Song diary</h2>
+                <p className="text-[#6b7a9e] text-sm">{IS_PRO ? "Your full learning history" : "Last 7 days — upgrade for full history"}</p>
+              </div>
+              {!IS_PRO && (
+                <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
+                  Full history is Pro
+                </span>
+              )}
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              {songs.map((s) => (
-                <div key={s.id} onClick={() => setSelected(s)} className="bg-white rounded-2xl border border-[#dde4f5] p-4 flex gap-4 cursor-pointer hover:border-[#4a72e8] hover:shadow-sm transition-all">
-                  <ActivityArt song={s} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2 mb-1">
-                      <div>
-                        <span className="font-bold text-sm text-[#0d1b3e]">{s.title}</span>
-                        <span className="text-sm text-[#6b7a9e]"> · {s.artist}</span>
+            {(() => {
+              const cutoff = IS_PRO ? null : new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+              const visibleSongs = IS_PRO ? songs : songs.filter(s => {
+                const d = parseSongDate(s.date);
+                return d && d >= cutoff;
+              });
+              return visibleSongs.length === 0 ? (
+                IS_PRO ? (
+                  <div className="text-center py-16 text-[#6b7a9e] text-sm">No songs logged yet.</div>
+                ) : (
+                  <ProGate onUpgrade={handleUpgrade}
+                    title="Full Activity History"
+                    description="You have no songs logged in the last 7 days. Upgrade to Pro to see your complete learning diary."
+                    features={["Complete history of every song you've practiced","See your progress over time","Filter by date, skill, or rating","Full learning timeline"]}
+                  />
+                )
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    {visibleSongs.map((s) => (
+                      <div key={s.id} onClick={() => setSelected(s)} className="bg-white rounded-2xl border border-[#dde4f5] p-4 flex gap-4 cursor-pointer hover:border-[#4a72e8] hover:shadow-sm transition-all">
+                        <ActivityArt song={s} />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2 mb-1">
+                            <div>
+                              <span className="font-bold text-sm text-[#0d1b3e]">{s.title}</span>
+                              <span className="text-sm text-[#6b7a9e]"> · {s.artist}</span>
+                            </div>
+                            <span className="text-xs text-[#6b7a9e] flex-shrink-0">{s.date}</span>
+                          </div>
+                          <div className="flex items-center gap-1 mb-2">
+                            {[1,2,3,4,5].map((n) => <StarIcon key={n} className={"w-3.5 h-3.5 "+(n<=s.rating?"text-amber-400":"text-[#dde4f5]")} filled={n<=s.rating} />)}
+                            <span className="text-xs text-[#6b7a9e] ml-1">{s.progress}% mastered</span>
+                          </div>
+                          {s.notes && <p className="text-xs text-[#6b7a9e] leading-relaxed italic line-clamp-2">"{s.notes}"</p>}
+                        </div>
                       </div>
-                      <span className="text-xs text-[#6b7a9e] flex-shrink-0">{s.date}</span>
-                    </div>
-                    <div className="flex items-center gap-1 mb-2">
-                      {[1,2,3,4,5].map((n) => <StarIcon key={n} className={"w-3.5 h-3.5 "+(n<=s.rating?"text-amber-400":"text-[#dde4f5]")} filled={n<=s.rating} />)}
-                      <span className="text-xs text-[#6b7a9e] ml-1">{s.progress}% mastered</span>
-                    </div>
-                    {s.notes && <p className="text-xs text-[#6b7a9e] leading-relaxed italic line-clamp-2">"{s.notes}"</p>}
+                    ))}
                   </div>
-                </div>
-              ))}
-            </div>
+                  {!IS_PRO && songs.length > visibleSongs.length && (
+                    <div className="mt-6 bg-gradient-to-r from-[#f0f4ff] to-[#e8eeff] rounded-2xl p-5 flex items-center justify-between gap-4 border border-[#dde4f5]">
+                      <div>
+                        <div className="font-black text-sm text-[#0d1b3e]" style={{fontFamily:"Nunito,sans-serif"}}>+{songs.length - visibleSongs.length} more songs hidden</div>
+                        <div className="text-xs text-[#6b7a9e]">Upgrade Pro to see your full history</div>
+                      </div>
+                      <button className="bg-[#1a3a8f] text-white font-black text-xs px-4 py-2.5 rounded-xl border-none cursor-pointer hover:bg-[#4a72e8] transition-all flex-shrink-0" style={{fontFamily:"Nunito,sans-serif"}}>
+                        Upgrade $7/mo →
+                      </button>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
@@ -1923,35 +2131,35 @@ export default function Dashboard({ darkMode, setDarkMode }) {
           <div>
             <div className="mb-5">
               <h2 className="font-black text-2xl text-[#0d1b3e]" style={{ fontFamily:"Nunito, sans-serif" }}>Skill breakdown</h2>
-              <p className="text-[#6b7a9e] text-sm">Built automatically from your song library</p>
+              <p className="text-[#6b7a9e] text-sm">Built from your song library · click a skill to see songs</p>
             </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {SKILL_DATA.map((sk) => (
-                <div key={sk.label} className="bg-white rounded-2xl border border-[#dde4f5] p-5 shadow-sm">
-                  <div className="flex justify-between text-sm font-semibold mb-2">
-                    <span className="font-bold text-[#0d1b3e]">{sk.label}</span>
-                    <span className="text-[#4a72e8] font-bold">{sk.pct}%</span>
-                  </div>
-                  <div className="h-3 bg-[#e8eeff] rounded-full overflow-hidden mb-2">
-                    <div className={"h-full rounded-full bg-gradient-to-r "+sk.color} style={{ width:sk.pct+"%" }} />
-                  </div>
-                  <div className="flex flex-wrap gap-1.5">
-                    {sk.songs.map((s) => <span key={s} className="text-xs font-semibold text-[#6b7a9e] bg-[#f0f4ff] px-2.5 py-1 rounded-full border border-[#dde4f5]">{s}</span>)}
-                  </div>
-                </div>
-              ))}
-            </div>
+            {!IS_PRO ? (
+              <ProGate onUpgrade={handleUpgrade}
+                title="Skills Breakdown"
+                description="See exactly which techniques you're strongest in and which need more work — built from your song library."
+                features={["Full skill breakdown with progress bars","Click any skill to see matching songs","Identify your weakest areas","Track improvement over time"]}
+              />
+            ) : (
+              <SkillsTab songs={songs} onSelectSong={setSelected} />
+            )}
           </div>
         )}
 
         {/* SETLISTS TAB */}
         {tab === "setlists" && (
           <div key="setlists-tab">
-            <div className="mb-5">
-              <h2 className={"font-black text-2xl "+text} style={{ fontFamily:"Nunito, sans-serif" }}>Setlist builder</h2>
-              <p className={"text-sm "+muted}>Build setlists from your song library</p>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className={"font-black text-2xl "+text} style={{ fontFamily:"Nunito, sans-serif" }}>Setlist builder</h2>
+                <p className={"text-sm "+muted}>{IS_PRO ? "Build setlists from your song library" : "Free plan: 3 setlists · Upgrade for unlimited"}</p>
+              </div>
+              {!IS_PRO && (
+                <span className="text-xs font-bold text-amber-600 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-full">
+                  Unlimited setlists is Pro
+                </span>
+              )}
             </div>
-            <SetlistBuilder key="setlist-builder" songs={songs} dark={dark} />
+            <SetlistBuilder key="setlist-builder" songs={songs} dark={dark} isPro={IS_PRO} />
           </div>
         )}
 
@@ -1962,7 +2170,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
               <h2 className="font-black text-2xl text-[#0d1b3e]" style={{ fontFamily:"Nunito, sans-serif" }}>Learning Packs</h2>
               <p className="text-sm text-[#6b7a9e]">Curated song collections to guide your learning journey</p>
             </div>
-            <Packs songs={songs} onAddSong={addSong} isPro={false} />
+            <Packs songs={songs} onAddSong={addSong} isPro={IS_PRO} />
           </div>
         )}
       </div>

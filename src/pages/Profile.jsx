@@ -144,9 +144,21 @@ function AchievementBadge({ a }) {
 
 // ── STAT CARD ─────────────────────────────────────────────────
 function StatCard({ value, label, icon, color, bg }) {
+  const icons = {
+    songs:   <><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></>,
+    skills:  <><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></>,
+    mastered:<><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill={color} stroke="none"/></>,
+    streak:  <><path d="M8.5 14.5A2.5 2.5 0 0011 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 11-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 002.5 2.5z"/></>,
+    rating:  <><path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" fill={color} stroke="none"/></>,
+    badges:  <><path d="M12 15l-4 5 4-2 4 2-4-5z"/><circle cx="12" cy="8" r="6"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12" y2="17"/></>,
+  };
   return (
     <div className="bg-white rounded-2xl border border-[#dde4f5] p-3 flex flex-col items-center justify-center text-center gap-1 shadow-sm">
-      <div className="w-8 h-8 rounded-xl flex items-center justify-center text-base" style={{background:bg}}>{icon}</div>
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{background:bg}}>
+        <svg viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+          {icons[icon]}
+        </svg>
+      </div>
       <div className="font-black text-xl" style={{color,fontFamily:"Nunito,sans-serif"}}>{value}</div>
       <div className="text-[9px] font-bold text-[#6b7a9e] uppercase tracking-wide leading-tight">{label}</div>
     </div>
@@ -354,12 +366,12 @@ export default function Profile() {
 
         {/* ── STATS GRID ── */}
         <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-          <StatCard value={songs.length}                          label="Songs logged"  icon="🎵" color="#1a3a8f" bg="#e8eeff"/>
-          <StatCard value={skillCount}                            label="Skills"        icon="🎯" color="#7c3aed" bg="#f3e8ff"/>
-          <StatCard value={mastered}                              label="Mastered"      icon="✨" color="#16a34a" bg="#dcfce7"/>
-          <StatCard value={streak>0?`${streak}d`:"—"}             label="Streak"        icon="🔥" color="#ea580c" bg="#ffedd5"/>
-          <StatCard value={avgRating}                             label="Avg rating"    icon="⭐" color="#d97706" bg="#fef3c7"/>
-          <StatCard value={`${earnedCount}/${achievements.length}`} label="Badges"      icon="🏆" color="#0891b2" bg="#cffafe"/>
+          <StatCard value={songs.length}                            label="Songs logged" color="#1a3a8f" bg="#e8eeff" icon="songs"/>
+          <StatCard value={skillCount}                              label="Skills"       color="#7c3aed" bg="#f3e8ff" icon="skills"/>
+          <StatCard value={mastered}                                label="Mastered"     color="#16a34a" bg="#dcfce7" icon="mastered"/>
+          <StatCard value={streak>0?`${streak}d`:"—"}              label="Streak"       color="#ea580c" bg="#ffedd5" icon="streak"/>
+          <StatCard value={avgRating}                               label="Avg rating"   color="#d97706" bg="#fef3c7" icon="rating"/>
+          <StatCard value={`${earnedCount}/${achievements.length}`} label="Badges"       color="#0891b2" bg="#cffafe" icon="badges"/>
         </div>
 
         {/* ── TABS ── */}

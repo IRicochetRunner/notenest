@@ -1,23 +1,34 @@
 // src/components/Packs.jsx
 import { useState, useEffect, useRef } from "react";
 
-// ── ALBUM ART CACHE + HOOK ───────────────────────────────────
+// ?? ALBUM ART CACHE + HOOK ???????????????????????????????????
 const artCache = {};
 
+async function fetchArt(title, artist) {
+  const key = `${title}__${artist}`;
+  if (artCache[key] !== undefined) return artCache[key];
+  const queries = [
+    `${title} ${artist}`,
+    title,
+    `${artist} ${title.split(" ").slice(0,2).join(" ")}`,
+  ];
+  for (const q of queries) {
+    try {
+      const url = `https://itunes.apple.com/search?term=${encodeURIComponent(q)}&entity=song&limit=5&media=music`;
+      const d = await fetch(url).then(r => r.json());
+      const art = d.results?.find(r => r.artworkUrl100)?.artworkUrl100?.replace("100x100bb","600x600bb") || null;
+      if (art) { artCache[key] = art; return art; }
+    } catch(e) {}
+  }
+  artCache[key] = null;
+  return null;
+}
+
 function useAlbumArt(title, artist) {
-  const [url, setUrl] = useState(artCache[`${title}__${artist}`] || null);
+  const [url, setUrl] = useState(() => artCache[`${title}__${artist}`] || null);
   useEffect(() => {
-    const key = `${title}__${artist}`;
-    if (artCache[key]) { setUrl(artCache[key]); return; }
-    const q = encodeURIComponent(`${title} ${artist}`);
-    fetch(`https://itunes.apple.com/search?term=${q}&entity=song&limit=1`)
-      .then(r => r.json())
-      .then(d => {
-        const art = d.results?.[0]?.artworkUrl100?.replace("100x100", "300x300") || null;
-        artCache[key] = art;
-        setUrl(art);
-      })
-      .catch(() => {});
+    if (artCache[`${title}__${artist}`] !== undefined) { setUrl(artCache[`${title}__${artist}`]); return; }
+    fetchArt(title, artist).then(setUrl);
   }, [title, artist]);
   return url;
 }
@@ -31,58 +42,62 @@ function usePackAlbumArts(songs) {
       const key = `${song.title}__${song.artist}`;
       if (fetched.current.has(key)) return;
       fetched.current.add(key);
+      if (artCache[key] !== undefined) { setArts(a => ({ ...a, [key]: artCache[key] })); return; }
       setTimeout(() => {
-        if (artCache[key]) { setArts(a => ({ ...a, [key]: artCache[key] })); return; }
-        const q = encodeURIComponent(`${song.title} ${song.artist}`);
-        fetch(`https://itunes.apple.com/search?term=${q}&entity=song&limit=1`)
-          .then(r => r.json())
-          .then(d => {
-            const art = d.results?.[0]?.artworkUrl100?.replace("100x100", "300x300") || null;
-            artCache[key] = art;
-            setArts(a => ({ ...a, [key]: art }));
-          })
-          .catch(() => {});
-      }, i * 120);
+        fetchArt(song.title, song.artist).then(art => {
+          setArts(a => ({ ...a, [key]: art }));
+        });
+      }, i * 150);
     });
   }, [songs]);
   return arts;
 }
 
 
-// ── SONG BREAKDOWNS ──────────────────────────────────────────
+// ?? SONG BREAKDOWNS ??????????????????????????????????????????
 const SONG_BREAKDOWNS = {
+  "Good Times": {
+    fact: "The bass line from Good Times was directly sampled by The Sugarhill Gang for Rapper's Delight - one of the most borrowed grooves in music history.",
+    focus: "It's all about consistent tone and pocket. Keep your thumb relaxed, let the note ring just long enough, and lock in with the kick drum.",
+    chips: ["Groove", "Pocket playing", "Disco bass"],
+  },
+  "Le Freak": {
+    fact: "Edwards wrote Le Freak after being turned away from Studio 54 on New Year's Eve 1977. The frustration turned into one of the best-selling singles in Atlantic Records history.",
+    focus: "The line stays mostly on the E and A strings. Focus on the rhythmic precision - every note lands exactly on the beat.",
+    chips: ["Funk Bass", "Rhythmic precision", "Root-fifth patterns"],
+  },
   "Give It Away": {
-    fact: "Flea wrote this bass line as a warm-up exercise before a rehearsal — the band heard it and built the whole song around it.",
+    fact: "Flea wrote this bass line as a warm-up exercise before a rehearsal - the band heard it and built the whole song around it.",
     focus: "The line lives entirely on the E string. Nail the thumb slap and muted dead notes before adding speed.",
     chips: ["Thumb slap", "Dead notes", "E string groove"],
   },
   "Under the Bridge": {
-    fact: "John Frusciante wrote the lyrics as a poem about loneliness. Flea's bass enters slowly and builds — matching the emotional arc perfectly.",
-    focus: "Play with your fingers, not a pick. The verse line is all about space — don't fill every beat.",
+    fact: "John Frusciante wrote the lyrics as a poem about loneliness. Flea's bass enters slowly and builds - matching the emotional arc perfectly.",
+    focus: "Play with your fingers, not a pick. The verse line is all about space - don't fill every beat.",
     chips: ["Fingerstyle", "Space & dynamics", "Walking bass"],
   },
   "Around the World": {
-    fact: "The entire song is one repeating riff — Flea plays it 67 times. Endurance and consistency are the lesson here.",
+    fact: "The entire song is one repeating riff - Flea plays it 67 times. Endurance and consistency are the lesson here.",
     focus: "Slap the root, pop the octave. Get the pattern locked at half speed before bringing it up to tempo.",
     chips: ["Octave patterns", "Slap & pop", "Stamina"],
   },
   "Can't Stop": {
-    fact: "Flea improvised the main riff in the studio. The syncopated rhythm is deceptively tricky — it constantly lands slightly off the beat.",
+    fact: "Flea improvised the main riff in the studio. The syncopated rhythm is deceptively tricky - it constantly lands slightly off the beat.",
     focus: "Count the rests. The groove lives in what you don't play as much as what you do.",
     chips: ["Syncopation", "Groove", "Funk rhythm"],
   },
   "Higher Ground": {
-    fact: "Originally a Stevie Wonder song. Flea's slap version is faster and more aggressive — a masterclass in reinterpreting a classic.",
-    focus: "The thumb needs to bounce off the string immediately — no resting. Practice the thumb motion slowly and separately first.",
+    fact: "Originally a Stevie Wonder song. Flea's slap version is faster and more aggressive - a masterclass in reinterpreting a classic.",
+    focus: "The thumb needs to bounce off the string immediately - no resting. Practice the thumb motion slowly and separately first.",
     chips: ["Slap Bass", "Thumb bounce", "Speed building"],
   },
   "Aeroplane": {
-    fact: "Flea plays this while singing backing vocals live — one of the hardest coordination feats in rock bass.",
+    fact: "Flea plays this while singing backing vocals live - one of the hardest coordination feats in rock bass.",
     focus: "The verse groove is a funk pattern with ghost notes between every slap. Ghost notes are the secret ingredient.",
     chips: ["Ghost notes", "Slap Bass", "Coordination"],
   },
   "Come Together": {
-    fact: "McCartney's bass line was the last thing recorded. Lennon told him to 'just do something interesting' — and he did.",
+    fact: "McCartney's bass line was the last thing recorded. Lennon told him to 'just do something interesting' - and he did.",
     focus: "The signature slide at the start sets the tone. Use your middle finger and let the note ring into the slide.",
     chips: ["Slides", "Melodic bass", "Finger independence"],
   },
@@ -92,12 +107,12 @@ const SONG_BREAKDOWNS = {
     chips: ["Melodic bass", "Tone control", "Dynamics"],
   },
   "Hey Jude": {
-    fact: "The bass doesn't enter until 1:05 — McCartney holds back deliberately to make the entry hit harder.",
+    fact: "The bass doesn't enter until 1:05 - McCartney holds back deliberately to make the entry hit harder.",
     focus: "Simple, rootsy playing. The lesson here is restraint: serve the song, don't overplay.",
     chips: ["Restraint", "Root notes", "Song support"],
   },
   "Paperback Writer": {
-    fact: "One of the first pop songs where the bass was mixed loud enough to actually hear — a landmark in bass history.",
+    fact: "One of the first pop songs where the bass was mixed loud enough to actually hear - a landmark in bass history.",
     focus: "The riff alternates between a low drone and a climbing line. Keep your fretting hand relaxed or you'll fatigue fast.",
     chips: ["Riff playing", "Drone notes", "Hand relaxation"],
   },
@@ -112,8 +127,8 @@ const SONG_BREAKDOWNS = {
     chips: ["Odd accents", "Lead bass", "Tone"],
   },
   "YYZ": {
-    fact: "The intro is Morse code for YYZ — the airport code for Toronto Pearson. Rush's hometown airport.",
-    focus: "The main riff is in 5/4. Count it as 3+2 — it clicks once you hear the groupings.",
+    fact: "The intro is Morse code for YYZ - the airport code for Toronto Pearson. Rush's hometown airport.",
+    focus: "The main riff is in 5/4. Count it as 3+2 - it clicks once you hear the groupings.",
     chips: ["5/4 time", "Odd time", "Precision"],
   },
   "Whole Lotta Love": {
@@ -122,7 +137,7 @@ const SONG_BREAKDOWNS = {
     chips: ["Heavy groove", "Punchy articulation", "Tone"],
   },
   "Enter Sandman": {
-    fact: "Jason Newsted's bass was notoriously buried in the mix on this album. What you hear is mostly the guitar — lean into the guitar riff.",
+    fact: "Jason Newsted's bass was notoriously buried in the mix on this album. What you hear is mostly the guitar - lean into the guitar riff.",
     focus: "Follow the guitar riff exactly. The power comes from the two instruments locking together perfectly.",
     chips: ["Riff unison", "Heavy picking", "Timing"],
   },
@@ -132,12 +147,12 @@ const SONG_BREAKDOWNS = {
     chips: ["Fingerpicking", "Clean fretting", "Dynamics"],
   },
   "Master of Puppets": {
-    fact: "The mid-section breakdown was inspired by a church hymn. The tempo drops dramatically — don't rush back into the main riff.",
-    focus: "The main riff requires strict down-picking at high speed. Build up gradually — this one injures wrists if rushed.",
+    fact: "The mid-section breakdown was inspired by a church hymn. The tempo drops dramatically - don't rush back into the main riff.",
+    focus: "The main riff requires strict down-picking at high speed. Build up gradually - this one injures wrists if rushed.",
     chips: ["Down-picking", "Stamina", "Speed building"],
   },
   "Seven Nation Army": {
-    fact: "It's actually a guitar through an octave pedal — not a bass at all. Still one of the most recognizable bass-sounding riffs ever.",
+    fact: "It's actually a guitar through an octave pedal - not a bass at all. Still one of the most recognizable bass-sounding riffs ever.",
     focus: "Five frets on the low E string. Nail the timing and the slight pause before the last two notes.",
     chips: ["Riff", "Timing", "Simplicity"],
   },
@@ -148,17 +163,17 @@ const SONG_BREAKDOWNS = {
   },
   "Billie Jean": {
     fact: "The bass line loops 145 times throughout the song. Louis Johnson played it but MJ wrote every note.",
-    focus: "It never changes — but your feel has to stay perfect the whole way through. Practice playing it 10 times in a row without losing the groove.",
+    focus: "It never changes - but your feel has to stay perfect the whole way through. Practice playing it 10 times in a row without losing the groove.",
     chips: ["Consistency", "Groove", "Stamina"],
   },
   "Hysteria": {
     fact: "Chris Wolstenholme wrote this bass line while the rest of Muse were watching TV. It took him three weeks to be able to play it up to speed.",
-    focus: "Pure fingerstyle speed. The right hand is everything here — alternate index and middle finger strictly and build speed slowly.",
+    focus: "Pure fingerstyle speed. The right hand is everything here - alternate index and middle finger strictly and build speed slowly.",
     chips: ["Fingerstyle speed", "Endurance", "Right hand technique"],
   },
   "Purple Haze": {
-    fact: "The opening chord is a dissonant tritone — the 'devil's interval' that was historically banned by the church. Jimi opened with it anyway.",
-    focus: "The riff is all in the fretting hand. Let the notes ring into each other slightly — that blurry quality is intentional.",
+    fact: "The opening chord is a dissonant tritone - the 'devil's interval' that was historically banned by the church. Jimi opened with it anyway.",
+    focus: "The riff is all in the fretting hand. Let the notes ring into each other slightly - that blurry quality is intentional.",
     chips: ["Tritone riff", "String bending", "Sustain"],
   },
   "Little Wing": {
@@ -167,23 +182,23 @@ const SONG_BREAKDOWNS = {
     chips: ["Chord melody", "Thumb technique", "Harmony"],
   },
   "Stairway to Heaven": {
-    fact: "Page wrote the intro in one night at Headley Grange. The song has four distinct sections — treat each one as its own piece.",
+    fact: "Page wrote the intro in one night at Headley Grange. The song has four distinct sections - treat each one as its own piece.",
     focus: "The intro fingerpicking uses a descending bass line under constant treble strings. Pin your ring finger on the high B and D strings and let the bass line move underneath.",
     chips: ["Fingerpicking", "Descending bass", "Open strings"],
   },
   "Kashmir": {
-    fact: "The guitar is tuned to DADGAD — an open tuning Page discovered through folk music. The riff has a Middle Eastern feel that no standard tuning can replicate.",
-    focus: "The main riff repeats in 3/4 while the drums play in 4/4 — it creates a hypnotic polyrhythm. Feel both pulses simultaneously.",
+    fact: "The guitar is tuned to DADGAD - an open tuning Page discovered through folk music. The riff has a Middle Eastern feel that no standard tuning can replicate.",
+    focus: "The main riff repeats in 3/4 while the drums play in 4/4 - it creates a hypnotic polyrhythm. Feel both pulses simultaneously.",
     chips: ["DADGAD tuning", "Polyrhythm", "Open tuning"],
   },
   "In the Air Tonight": {
-    fact: "The famous drum fill at 3:40 wasn't planned — Collins improvised it in the studio and it became one of the most iconic moments in pop history.",
-    focus: "The whole song builds to that fill. When it arrives, hit the snare with everything you have — dynamics are the entire lesson here.",
+    fact: "The famous drum fill at 3:40 wasn't planned - Collins improvised it in the studio and it became one of the most iconic moments in pop history.",
+    focus: "The whole song builds to that fill. When it arrives, hit the snare with everything you have - dynamics are the entire lesson here.",
     chips: ["Drum fill", "Dynamics", "Timing"],
   },
   "When the Levee Breaks": {
     fact: "Bonham set up his kit at the bottom of a stairwell at Headley Grange to get that massive reverb. There were microphones at the top of the stairs.",
-    focus: "The shuffle feel is the hardest part. It should swing slightly — not straight 8ths, not full swing. Feel it in your body.",
+    focus: "The shuffle feel is the hardest part. It should swing slightly - not straight 8ths, not full swing. Feel it in your body.",
     chips: ["Shuffle groove", "Swing feel", "Power"],
   },
   "Smells Like Teen Spirit": {
@@ -193,12 +208,12 @@ const SONG_BREAKDOWNS = {
   },
   "Wonderwall": {
     fact: "Noel Gallagher wrote this about his then-girlfriend. The capo on the 2nd fret gives it that jangly, bright sound that's impossible to replicate without one.",
-    focus: "Use a capo on fret 2. The strumming pattern is the hardest part — it's slightly syncopated. Tap your foot and lock in the rhythm before adding the chords.",
+    focus: "Use a capo on fret 2. The strumming pattern is the hardest part - it's slightly syncopated. Tap your foot and lock in the rhythm before adding the chords.",
     chips: ["Capo technique", "Strumming pattern", "Open chords"],
   },
 };
 
-// ── PACK DATA ────────────────────────────────────────────────
+// ?? PACK DATA ????????????????????????????????????????????????
 const ALL_PACKS = [
   {
     id: "flea",
@@ -207,7 +222,7 @@ const ALL_PACKS = [
     type: "musician",
     title: "Learn Like Flea",
     subtitle: "Red Hot Chili Peppers",
-    description: "Master Flea's signature slap-funk style through his most iconic bass lines — from stadium anthems to groove-heavy deep cuts.",
+    description: "Master Flea's signature slap-funk style through his most iconic bass lines - from stadium anthems to groove-heavy deep cuts.",
     color: "#e84c3d",
     gradient: "from-[#e84c3d] to-[#ff8c42]",
     difficulty: "Intermediate",
@@ -227,7 +242,7 @@ const ALL_PACKS = [
     type: "musician",
     title: "Learn Like McCartney",
     subtitle: "The Beatles",
-    description: "Paul McCartney's melodic bass playing changed music forever. These lines are deceptively musical — perfect for developing taste.",
+    description: "Paul McCartney's melodic bass playing changed music forever. These lines are deceptively musical - perfect for developing taste.",
     color: "#1a3a8f",
     gradient: "from-[#1a3a8f] to-[#4a72e8]",
     difficulty: "Beginner",
@@ -276,13 +291,35 @@ const ALL_PACKS = [
     ],
   },
   {
+    id: "bernard-edwards",
+    pro: true,
+    instrument: "Bass",
+    type: "musician",
+    title: "Learn Like Bernard Edwards",
+    subtitle: "Chic & Beyond",
+    description: "The architect of disco-funk bass. Bernard Edwards built grooves so deep they've been sampled hundreds of times. Lock in the pocket and never leave it.",
+    color: "#7c3aed",
+    gradient: "from-[#7c3aed] to-[#a855f7]",
+    difficulty: "Intermediate",
+    songs: [
+      { title: "Good Times", artist: "Chic", skill: "Groove", difficulty: "Beginner", duration: "8:12" },
+      { title: "Le Freak", artist: "Chic", skill: "Funk Bass", difficulty: "Beginner", duration: "5:29" },
+      { title: "Everybody Dance", artist: "Chic", skill: "Groove", difficulty: "Intermediate", duration: "7:40" },
+      { title: "I Want Your Love", artist: "Chic", skill: "Melodic Bass", difficulty: "Intermediate", duration: "5:20" },
+      { title: "Material Girl", artist: "Madonna", skill: "Funk Bass", difficulty: "Intermediate", duration: "3:54" },
+      { title: "Upside Down", artist: "Diana Ross", skill: "Groove", difficulty: "Intermediate", duration: "7:01" },
+      { title: "We Are Family", artist: "Sister Sledge", skill: "Funk Bass", difficulty: "Intermediate", duration: "8:59" },
+      { title: "He's the Greatest Dancer", artist: "Sister Sledge", skill: "Slap Bass", difficulty: "Advanced", duration: "7:05" },
+    ],
+  },
+  {
     id: "metallica",
     pro: true,
     instrument: "Guitar",
     type: "band",
     title: "Metallica Essentials",
     subtitle: "Thrash Metal Foundations",
-    description: "From chugging riffs to complex arrangements — Metallica's catalog is a masterclass in heavy bass playing.",
+    description: "From chugging riffs to complex arrangements - Metallica's catalog is a masterclass in heavy bass playing.",
     color: "#374151",
     gradient: "from-[#374151] to-[#6b7280]",
     difficulty: "Intermediate",
@@ -301,7 +338,7 @@ const ALL_PACKS = [
     type: "band",
     title: "RHCP Deep Cuts",
     subtitle: "Beyond the Hits",
-    description: "Go deeper into the Red Hot Chili Peppers' catalog — the B-sides and album tracks that will really level up your playing.",
+    description: "Go deeper into the Red Hot Chili Peppers' catalog - the B-sides and album tracks that will really level up your playing.",
     color: "#dc2626",
     gradient: "from-[#dc2626] to-[#ef4444]",
     difficulty: "Intermediate",
@@ -318,7 +355,7 @@ const ALL_PACKS = [
     type: "difficulty",
     title: "Beginner Bass Lines",
     subtitle: "Start Your Journey",
-    description: "The best songs to learn first — great tone, simple patterns, and instantly recognizable. Build your foundation here.",
+    description: "The best songs to learn first - great tone, simple patterns, and instantly recognizable. Build your foundation here.",
     color: "#16a34a",
     gradient: "from-[#16a34a] to-[#22c55e]",
     difficulty: "Beginner",
@@ -337,7 +374,7 @@ const ALL_PACKS = [
     type: "difficulty",
     title: "Next Level Bass",
     subtitle: "Level Up Your Playing",
-    description: "You've got the basics — now it's time to develop real groove, dynamics, and style with these step-up songs.",
+    description: "You've got the basics - now it's time to develop real groove, dynamics, and style with these step-up songs.",
     color: "#4a72e8",
     gradient: "from-[#1a3a8f] to-[#4a72e8]",
     difficulty: "Intermediate",
@@ -441,7 +478,7 @@ const ALL_PACKS = [
     type: "musician",
     title: "Learn Like Jimmy Page",
     subtitle: "Led Zeppelin",
-    description: "From acoustic fingerpicking to thunderous riffs — Page's guitar work spans every style and remains endlessly rewarding to study.",
+    description: "From acoustic fingerpicking to thunderous riffs - Page's guitar work spans every style and remains endlessly rewarding to study.",
     color: "#92400e",
     gradient: "from-[#92400e] to-[#d97706]",
     difficulty: "Intermediate",
@@ -496,7 +533,7 @@ const ALL_PACKS = [
     type: "difficulty",
     title: "Beginner Drum Songs",
     subtitle: "Start Your Groove",
-    description: "The best songs to learn drums on — solid backbeats, steady tempos, and iconic grooves that teach you the fundamentals.",
+    description: "The best songs to learn drums on - solid backbeats, steady tempos, and iconic grooves that teach you the fundamentals.",
     color: "#ea580c",
     gradient: "from-[#ea580c] to-[#fb923c]",
     difficulty: "Beginner",
@@ -541,7 +578,7 @@ const DIFF_COLOR = {
   Advanced:     "bg-red-100 text-red-600",
 };
 
-// ── ALBUM COLLAGE (2x2 grid of covers) ───────────────────────
+// ?? ALBUM COLLAGE (2x2 grid of covers) ???????????????????????
 function AlbumCollage({ songs, color }) {
   const arts = usePackAlbumArts(songs.slice(0, 4));
   const slots = songs.slice(0, 4);
@@ -568,7 +605,7 @@ function AlbumCollage({ songs, color }) {
   );
 }
 
-// ── SONG ROW WITH ART ────────────────────────────────────────
+// ?? SONG ROW WITH ART ????????????????????????????????????????
 function SongRowWithArt({ song, index, done, adding, onAdd, packColor }) {
   const art = useAlbumArt(song.title, song.artist);
   const [expanded, setExpanded] = useState(false);
@@ -653,7 +690,7 @@ function SongRowWithArt({ song, index, done, adding, onAdd, packColor }) {
   );
 }
 
-// ── PACK CARD ─────────────────────────────────────────────────
+// ?? PACK CARD ?????????????????????????????????????????????????
 function PackCard({ pack, onOpen, isStarted, progress, isPro }) {
   const locked = pack.pro && !isPro;
   return (
@@ -669,7 +706,7 @@ function PackCard({ pack, onOpen, isStarted, progress, isPro }) {
           PRO
         </div>
       )}
-      {/* Square album collage header — takes up 60% */}
+      {/* Square album collage header - takes up 60% */}
       <div className="relative overflow-hidden flex-shrink-0" style={{ height: "60%" }}>
         <AlbumCollage songs={pack.songs} color={pack.color} />
         {locked && <div className="absolute inset-0 bg-black/30 backdrop-blur-[2px]" />}
@@ -689,7 +726,7 @@ function PackCard({ pack, onOpen, isStarted, progress, isPro }) {
         </div>
       </div>
 
-      {/* Bottom info — takes remaining 40% */}
+      {/* Bottom info - takes remaining 40% */}
       <div className="flex-1 p-4 flex flex-col justify-between">
         <p className="text-xs text-[#6b7a9e] leading-relaxed line-clamp-2">{pack.description}</p>
         <div className="flex items-center justify-between mt-3">
@@ -716,7 +753,7 @@ function PackCard({ pack, onOpen, isStarted, progress, isPro }) {
   );
 }
 
-// ── PACK MODAL ────────────────────────────────────────────────
+// ?? PACK MODAL ????????????????????????????????????????????????
 function PackModal({ pack, onClose, onStart, isStarted, completedSongs, onAddSong, isPro }) {
   const [adding, setAdding] = useState(null);
   const arts = usePackAlbumArts(pack.songs.slice(0, 4));
@@ -729,7 +766,7 @@ function PackModal({ pack, onClose, onStart, isStarted, completedSongs, onAddSon
       onClick={e => e.target === e.currentTarget && onClose()}>
       <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
 
-        {/* Header — album collage + overlay */}
+        {/* Header - album collage + overlay */}
         <div className="relative flex-shrink-0 overflow-hidden" style={{ height: 220 }}>
           {/* 4-up collage */}
           <div className="grid grid-cols-4 h-full">
@@ -785,7 +822,7 @@ function PackModal({ pack, onClose, onStart, isStarted, completedSongs, onAddSon
 
         {/* Songs / Upgrade wall */}
         {locked ? (
-          <div className="flex-1 flex flex-col items-center justify-center px-8 py-12 text-center">
+          <div className="flex-1 overflow-y-auto flex flex-col items-center px-8 py-10 text-center">
             <div className="w-16 h-16 bg-amber-50 border-2 border-amber-200 rounded-3xl flex items-center justify-center mb-4">
               <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 text-amber-500"><path d="M12 1C8.676 1 6 3.676 6 7v1H4v15h16V8h-2V7c0-3.324-2.676-6-6-6zm0 2c2.276 0 4 1.724 4 4v1H8V7c0-2.276 1.724-4 4-4zm0 9a2 2 0 110 4 2 2 0 010-4z"/></svg>
             </div>
@@ -806,7 +843,7 @@ function PackModal({ pack, onClose, onStart, isStarted, completedSongs, onAddSon
             <button onClick={onClose}
               className="w-full max-w-xs bg-[#1a3a8f] text-white font-black py-3.5 rounded-2xl shadow-[0_4px_0_#0f2460] hover:-translate-y-0.5 transition-all border-none cursor-pointer"
               style={{fontFamily:"Nunito,sans-serif"}}>
-              Upgrade to Pro — $7/mo →
+              Upgrade to Pro - $7/mo →
             </button>
           </div>
         ) : (
@@ -862,7 +899,7 @@ function PackModal({ pack, onClose, onStart, isStarted, completedSongs, onAddSon
   );
 }
 
-// ── MAIN ──────────────────────────────────────────────────────
+// ?? MAIN ??????????????????????????????????????????????????????
 export default function Packs({ songs, onAddSong, isPro = false }) {
   const [filter, setFilter] = useState("all");
   const [openPack, setOpenPack] = useState(null);

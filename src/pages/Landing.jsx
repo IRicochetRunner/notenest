@@ -291,6 +291,91 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* HOW IT WORKS */}
+      <section id="how" style={{background:"#eef1fa", padding:"80px 0"}}>
+        <div style={{maxWidth:"1100px", margin:"0 auto", padding:"0 48px"}}>
+          <div className="text-center text-xs font-bold tracking-[.14em] uppercase text-[#4a72e8] mb-4">How it works</div>
+          <h2 className="font-black text-center mb-4 text-[#0d1b3e]" style={{fontFamily:"Nunito,sans-serif", fontSize:"clamp(2rem,3vw,3rem)"}}>Track your progress like a pro</h2>
+          <p className="text-center text-[#6b7a9e] mb-16 text-base">Three simple steps to level up your playing.</p>
+          <div className="grid gap-8" style={{gridTemplateColumns:"repeat(3,1fr)"}}>
+            {[
+              { step:"01", title:"Log a song", desc:"Add any song you're learning or have learned. Rate it, tag your skills, track your progress percentage, and add notes on what to work on.", color:"#1a3a8f" },
+              { step:"02", title:"Build your library", desc:"Your song library grows into a visual map of your musical journey. See patterns in what you play, which skills you're developing, and what to tackle next.", color:"#7c3aed" },
+              { step:"03", title:"Level up with Packs", desc:"Follow curated learning packs from legends like Flea, Jimi Hendrix, and Bernard Edwards. Tick off songs as you learn them and follow a structured path.", color:"#0891b2" },
+            ].map(({step,title,desc,color}) => (
+              <div key={step} className="bg-white rounded-3xl p-8 shadow-sm border border-[#dde4f5] relative overflow-hidden">
+                <div className="font-black text-7xl select-none pointer-events-none mb-2" style={{color, fontFamily:"Nunito,sans-serif", opacity:0.08, lineHeight:1}}>{step}</div>
+                <h3 className="font-black text-xl text-[#0d1b3e] mb-3" style={{fontFamily:"Nunito,sans-serif"}}>{title}</h3>
+                <p className="text-[#6b7a9e] text-sm leading-relaxed">{desc}</p>
+              </div>
+            ))}
+          </div>
+
+          {/* Feature list */}
+          <div className="grid gap-4 mt-10" style={{gridTemplateColumns:"repeat(2,1fr)"}}>
+            {[
+              { title:"Song diary", desc:"Every song you log builds a full history of your learning journey with dates, ratings, and notes." },
+              { title:"Skill breakdown", desc:"See exactly which techniques you're strongest in — built automatically from your song library." },
+              { title:"Streak tracking", desc:"Build daily practice habits. Your streak counter keeps you accountable and motivated." },
+              { title:"Setlist builder", desc:"Drag and drop songs into setlists for gigs, practice sessions, or jam nights." },
+              { title:"Learning packs", desc:"Follow curated song collections from world-class musicians to build real technique." },
+              { title:"Song structure", desc:"Map out song sections visually — verse, chorus, bridge — so you never lose your place." },
+            ].map(({title,desc}) => (
+              <div key={title} className="flex gap-4 items-start bg-white rounded-2xl p-5 border border-[#dde4f5] shadow-sm">
+                <div className="w-7 h-7 rounded-xl bg-[#e8eeff] flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="#1a3a8f" strokeWidth="2.5" strokeLinecap="round" className="w-3.5 h-3.5"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div>
+                  <div className="font-black text-sm text-[#0d1b3e] mb-1" style={{fontFamily:"Nunito,sans-serif"}}>{title}</div>
+                  <div className="text-xs text-[#6b7a9e] leading-relaxed">{desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* SKILLS */}
+      <section id="skills" style={{background:"#fff", padding:"80px 0"}}>
+        <div style={{maxWidth:"1100px", margin:"0 auto", padding:"0 48px"}}>
+          <div className="text-center text-xs font-bold tracking-[.14em] uppercase text-[#4a72e8] mb-4">Skills</div>
+          <h2 className="font-black text-center mb-4 text-[#0d1b3e]" style={{fontFamily:"Nunito,sans-serif", fontSize:"clamp(2rem,3vw,3rem)"}}>Know exactly what you're learning</h2>
+          <p className="text-center text-[#6b7a9e] mb-16 text-base max-w-xl mx-auto">Tag skills when you log a song. NoteNest builds your breakdown automatically — no manual tracking needed.</p>
+
+          <div className="grid gap-6 mb-12" style={{gridTemplateColumns:"repeat(2,1fr)"}}>
+            {[
+              { label:"Fingerpicking",    pct:78, color:"from-[#1a3a8f] to-[#4a72e8]",   songs:["Blackbird","Hotel California","Wish You Were Here"] },
+              { label:"Slap Bass",        pct:65, color:"from-[#7c3aed] to-[#a855f7]",   songs:["Never Too Much","Forget Me Nots","Can't Stop"] },
+              { label:"Barre Chords",     pct:54, color:"from-[#0891b2] to-[#22d3ee]",   songs:["Sultans of Swing","Back in Black","No Woman No Cry"] },
+              { label:"Groove & Pocket",  pct:45, color:"from-[#d97706] to-[#fbbf24]",   songs:["Good Times","Le Freak","Billie Jean"] },
+            ].map(({label,pct,color,songs}) => (
+              <div key={label} className="bg-[#f8f9ff] rounded-2xl p-6 border border-[#dde4f5]">
+                <div className="flex justify-between items-center mb-3">
+                  <span className="font-black text-sm text-[#0d1b3e]" style={{fontFamily:"Nunito,sans-serif"}}>{label}</span>
+                  <span className="text-xs font-bold text-[#4a72e8]">{pct}%</span>
+                </div>
+                <div className="h-2.5 bg-[#e8eeff] rounded-full overflow-hidden mb-3">
+                  <div className={`h-full rounded-full bg-gradient-to-r ${color}`} style={{width:`${pct}%`}}/>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {songs.map(s => <span key={s} className="text-[10px] font-bold text-[#6b7a9e] bg-white px-2 py-1 rounded-full border border-[#dde4f5]">{s}</span>)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-gradient-to-r from-[#1a3a8f] to-[#4a72e8] rounded-3xl p-10 text-center text-white">
+            <h3 className="font-black text-2xl mb-3" style={{fontFamily:"Nunito,sans-serif"}}>40+ skills tracked automatically</h3>
+            <p className="text-white/70 text-sm mb-6 max-w-md mx-auto">From fingerpicking and slap bass to sweep picking and chord melody — every technique you tag builds your profile.</p>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {["Fingerpicking","Slap Bass","Power Chords","Chord Melody","Groove","Lead Guitar","Fingerstyle","Barre Chords","Sweep Picking","Blues Lead","Riff","Walking Bass","Thumb Slap","Legato"].map(s => (
+                <span key={s} className="text-xs font-bold bg-white/20 text-white px-3 py-1.5 rounded-full border border-white/20">{s}</span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* PRICING */}
       <section className="relative z-10 py-32 px-12" id="pricing" style={{maxWidth:"1200px",margin:"0 auto"}}>
         <div className="text-center text-xs font-bold tracking-[.14em] uppercase text-[#4a72e8] mb-4">Pricing</div>
@@ -300,7 +385,7 @@ export default function Landing() {
           {[
             {name:"Free",price:"0",period:"Forever free",featured:false,features:["Up to 20 songs","Basic skill tracking","5 AI recommendations/month","1 setlist"],cta:"Get started free"},
             {name:"Pro",price:"7",period:"per month · cancel anytime",featured:true,features:["Unlimited songs","Full skill tracking","Unlimited AI recommendations","Unlimited setlists","Monthly progress reports"],cta:"Start Pro free for 7 days"},
-            {name:"Annual",price:"5",period:"per month · billed $60/year",featured:false,features:["Everything in Pro","Save $24 per year","Early access to new features","Yearly skill report"],cta:"Get Annual plan"},
+            {name:"Annual",price:"5",period:"per month · $60 billed upfront yearly",featured:false,features:["Everything in Pro","$60 charged once per year","Save $24 vs monthly","Early access to new features","Yearly skill report"],cta:"Get Annual plan"},
           ].map(plan => (
             <div key={plan.name} className={"rounded-3xl p-10 relative transition-all duration-300 " + (plan.featured ? "bg-[#1a3a8f] shadow-[0_20px_60px_rgba(26,58,143,0.35)] scale-[1.04]" : "bg-white border border-[#dde4f5] hover:-translate-y-2 hover:shadow-[0_24px_60px_rgba(26,58,143,0.1)]")}>
               {plan.featured && <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-[#f0a500] text-white text-xs font-black px-6 py-2 rounded-full uppercase tracking-wider whitespace-nowrap">Most Popular</div>}
