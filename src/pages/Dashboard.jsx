@@ -1661,6 +1661,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
   const [user, setUser] = useState(null);
   const [isPro, setIsPro] = useState(IS_PRO_DEV_OVERRIDE);
   const IS_PRO = isPro;
+  const [isAdmin, setIsAdmin] = useState(false);
 
   async function handleUpgrade(plan = "monthly") {
     const priceId = plan === "annual"
@@ -1899,6 +1900,16 @@ export default function Dashboard({ darkMode, setDarkMode }) {
                   style={{fontFamily:"Nunito,sans-serif"}}>
                   @{username}
                 </span>
+                {IS_PRO && (
+                  <span className="hidden md:flex items-center gap-1 text-[10px] font-black text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
+                    ❆ PRO
+                  </span>
+                )}
+                {isAdmin && (
+                  <a href="/admin" className="hidden md:flex items-center gap-1 text-[10px] font-black text-purple-600 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full no-underline hover:bg-purple-100 transition-all">
+                    ⚙ ADMIN
+                  </a>
+                )}
               </button>
               <button onClick={() => setShowSettings(true)} title="Settings"
                 className={"w-9 h-9 rounded-full flex items-center justify-center transition-all bg-transparent border-none cursor-pointer " + (dark ? "text-white/50 hover:text-white hover:bg-white/10" : "text-[#6b7a9e] hover:text-[#1a3a8f] hover:bg-[#e8eeff]")}>
