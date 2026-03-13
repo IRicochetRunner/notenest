@@ -1906,7 +1906,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
                   </span>
                 )}
                 {isAdmin && (
-                  <a href="/admin" className="hidden md:flex items-center gap-1 text-[10px] font-black text-purple-600 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-full no-underline hover:bg-purple-100 transition-all">
+                  <a href="/admin" className="hidden md:flex items-center gap-1 text-[10px] font-black text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full no-underline hover:bg-purple-100 transition-all">
                     ⚙ ADMIN
                   </a>
                 )}

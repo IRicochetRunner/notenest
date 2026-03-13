@@ -36,6 +36,11 @@ export default function Admin() {
   const [saved, setSaved] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [tab, setTab] = useState("packs"); // packs | edit
+  const [songSearch, setSongSearch] = useState("");
+  const [songResults, setSongResults] = useState([]);
+  const [songSearching, setSongSearching] = useState(false);
+  const [songSkill, setSongSkill] = useState("");
+  const [songDifficulty, setSongDifficulty] = useState("Beginner");
 
   useEffect(() => {
     checkAdminAndLoad();
@@ -53,6 +58,37 @@ export default function Admin() {
   async function loadPacks() {
     const { data } = await supabase.from("packs").select("*").order("sort_order");
     if (data) setPacks(data);
+  }
+
+  async function searchItunes(query) {
+    if (!query.trim()) { setSongResults([]); return; }
+    setSongSearching(true);
+    try {
+      const res = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=8&media=music`);
+      const data = await res.json();
+      setSongResults(data.results || []);
+    } catch(e) {
+      setSongResults([]);
+    }
+    setSongSearching(false);
+  }
+
+  function addSongFromItunes(result) {
+    const duration = result.trackTimeMillis
+      ? `${Math.floor(result.trackTimeMillis/60000)}:${String(Math.floor((result.trackTimeMillis%60000)/1000)).padStart(2,'0')}`
+      : "";
+    const newSong = {
+      title: result.trackName,
+      artist: result.artistName,
+      skill: songSkill || "",
+      difficulty: songDifficulty,
+      duration,
+      artworkUrl: result.artworkUrl100 || result.artworkUrl60 || null,
+    };
+    setEditingSongs(prev => [...prev, newSong]);
+    setSongResults([]);
+    setSongSearch("");
+    setSongSkill("");
   }
 
   function startNew() {
@@ -288,22 +324,73 @@ export default function Admin() {
                 <div className="bg-white rounded-2xl border border-[#dde4f5] p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="font-black text-sm text-[#0d1b3e] uppercase tracking-wider">Songs ({editingSongs.length})</h2>
-                    <button onClick={addSong}
-                      className="text-xs font-bold text-[#1a3a8f] bg-[#e8eeff] px-3 py-1.5 rounded-lg border-none cursor-pointer hover:bg-[#1a3a8f] hover:text-white transition-all">
-                      + Add Song
-                    </button>
+                  </div>
+
+                  {/* iTunes search */}
+                  <div className="mb-4">
+                    <div className="relative">
+                      <input
+                        value={songSearch}
+                        onChange={e => { setSongSearch(e.target.value); searchItunes(e.target.value); }}
+                        className="w-full px-3 py-2.5 border border-[#dde4f5] rounded-xl text-sm bg-[#f0f4ff] outline-none focus:border-[#4a72e8] pr-8"
+                        placeholder="Search iTunes to add a song..."
+                      />
+                      {songSearching && <div className="absolute right-3 top-3 text-[#6b7a9e] text-xs">...</div>}
+                    </div>
+
+                    {/* Skill + difficulty for next song to be added */}
+                    {(songResults.length > 0) && (
+                      <div className="flex gap-2 mt-2">
+                        <input
+                          value={songSkill}
+                          onChange={e => setSongSkill(e.target.value)}
+                          className="flex-1 px-2.5 py-2 border border-[#dde4f5] rounded-lg text-xs bg-white outline-none focus:border-[#4a72e8]"
+                          placeholder="Skill tag (e.g. Fingerstyle)"
+                        />
+                        <select value={songDifficulty} onChange={e => setSongDifficulty(e.target.value)}
+                          className="px-2.5 py-2 border border-[#dde4f5] rounded-lg text-xs bg-white outline-none focus:border-[#4a72e8]">
+                          {["Beginner","Intermediate","Advanced"].map(d => <option key={d}>{d}</option>)}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* iTunes results */}
+                    {songResults.length > 0 && (
+                      <div className="mt-2 bg-white border border-[#dde4f5] rounded-xl overflow-hidden shadow-lg">
+                        {songResults.map((r, i) => (
+                          <button key={i} onClick={() => addSongFromItunes(r)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[#f0f4ff] transition-all border-none cursor-pointer text-left border-b border-[#f0f4ff] last:border-0">
+                            {(r.artworkUrl100 || r.artworkUrl60) && <img src={(r.artworkUrl100 || r.artworkUrl60)} alt="" className="w-10 h-10 rounded-lg flex-shrink-0 object-cover" />}
+                            <div className="flex-1 min-w-0">
+                              <div className="text-xs font-bold text-[#0d1b3e] truncate">{r.trackName}</div>
+                              <div className="text-[10px] text-[#6b7a9e] truncate">{r.artistName} · {r.collectionName}</div>
+                            </div>
+                            <span className="text-[10px] text-[#6b7a9e] flex-shrink-0">
+                              {r.trackTimeMillis ? `${Math.floor(r.trackTimeMillis/60000)}:${String(Math.floor((r.trackTimeMillis%60000)/1000)).padStart(2,'0')}` : ""}
+                            </span>
+                            <span className="text-[10px] font-bold text-[#1a3a8f] bg-[#e8eeff] px-2 py-0.5 rounded-full flex-shrink-0">+ Add</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {editingSongs.length === 0 ? (
                     <div className="text-center py-8 text-[#b0baca] text-sm">
-                      No songs yet — click Add Song
+                      Search iTunes above to add songs
                     </div>
                   ) : (
                     <div className="flex flex-col gap-3">
                       {editingSongs.map((song, i) => (
                         <div key={i} className="bg-[#f8f9ff] rounded-xl border border-[#e8eeff] p-4">
                           <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-black text-[#6b7a9e]">Song {i + 1}</span>
+                            <div className="flex items-center gap-2">
+                              {song.artworkUrl
+                                ? <img src={song.artworkUrl} alt="" className="w-8 h-8 rounded-lg object-cover flex-shrink-0" />
+                                : <div className="w-8 h-8 rounded-lg bg-[#e8eeff] flex items-center justify-center text-[#6b7a9e] text-xs font-black flex-shrink-0">{(song.title||"?")[0]}</div>
+                              }
+                              <span className="text-xs font-black text-[#6b7a9e]">Song {i + 1}</span>
+                            </div>
                             <div className="flex gap-1">
                               <button onClick={() => moveSong(i, -1)} className="w-6 h-6 bg-white border border-[#dde4f5] rounded-lg text-xs cursor-pointer hover:bg-[#e8eeff]">↑</button>
                               <button onClick={() => moveSong(i, 1)} className="w-6 h-6 bg-white border border-[#dde4f5] rounded-lg text-xs cursor-pointer hover:bg-[#e8eeff]">↓</button>
