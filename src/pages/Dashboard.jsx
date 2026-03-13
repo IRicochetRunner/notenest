@@ -11,6 +11,70 @@ let _dashboardMounted = false;
 // IS_PRO is kept as a fallback only during local dev, set to true to test
 const IS_PRO_DEV_OVERRIDE = false;
 
+// ── UPGRADE MODAL ────────────────────────────────────────────
+function UpgradeModal({ onClose, onUpgrade }) {
+  const [loading, setLoading] = useState(null);
+  const handleClick = async (plan) => {
+    setLoading(plan);
+    await onUpgrade(plan);
+    setLoading(null);
+  };
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0d1b3e]/60 backdrop-blur-md p-4"
+      onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden">
+        {/* Header */}
+        <div className="bg-gradient-to-br from-[#1a3a8f] to-[#4a72e8] px-8 pt-8 pb-6 text-center relative">
+          <button onClick={onClose} className="absolute top-4 right-4 w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center text-white border-none cursor-pointer text-sm">✕</button>
+          <div className="w-14 h-14 bg-amber-400 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+            <svg viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7 text-white"><path d="M12 1l2.753 5.527 6.247.907-4.5 4.373 1.063 6.193L12 15.027l-5.563 2.973 1.063-6.193L3 7.434l6.247-.907z"/></svg>
+          </div>
+          <h2 className="font-black text-2xl text-white mb-1" style={{fontFamily:"Nunito,sans-serif"}}>Upgrade to Pro</h2>
+          <p className="text-white/70 text-sm">Unlock everything NoteNest has to offer</p>
+        </div>
+
+        {/* Features */}
+        <div className="px-8 py-5 border-b border-[#dde4f5]">
+          <div className="grid grid-cols-2 gap-2">
+            {["Unlimited attachments","Unlimited setlists","Full activity history","Skills breakdown","Song structure diagram","All 18 learning packs"].map(f => (
+              <div key={f} className="flex items-center gap-2">
+                <div className="w-4 h-4 bg-[#1a3a8f] rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" className="w-2 h-2"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <span className="text-xs font-bold text-[#0d1b3e]">{f}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Pricing options */}
+        <div className="px-8 py-6 flex flex-col gap-3">
+          {/* Annual */}
+          <button onClick={() => handleClick("annual")} disabled={!!loading}
+            className="relative w-full bg-[#1a3a8f] hover:bg-[#0f2460] text-white rounded-2xl p-5 text-left border-none cursor-pointer transition-all hover:-translate-y-0.5 shadow-[0_4px_0_#0f2460] disabled:opacity-60">
+            <div className="absolute top-3 right-3 bg-amber-400 text-white text-[10px] font-black px-2 py-0.5 rounded-full">BEST VALUE</div>
+            <div className="font-black text-lg" style={{fontFamily:"Nunito,sans-serif"}}>
+              {loading === "annual" ? "Loading..." : "$5/mo"}
+            </div>
+            <div className="text-white/70 text-xs mt-0.5">Billed annually · $60/yr · Save 37%</div>
+          </button>
+
+          {/* Monthly */}
+          <button onClick={() => handleClick("monthly")} disabled={!!loading}
+            className="w-full bg-white hover:bg-[#f0f4ff] text-[#0d1b3e] rounded-2xl p-5 text-left border-2 border-[#dde4f5] hover:border-[#4a72e8] cursor-pointer transition-all disabled:opacity-60">
+            <div className="font-black text-lg" style={{fontFamily:"Nunito,sans-serif"}}>
+              {loading === "monthly" ? "Loading..." : "$7/mo"}
+            </div>
+            <div className="text-[#6b7a9e] text-xs mt-0.5">Billed monthly · Cancel anytime</div>
+          </button>
+
+          <p className="text-center text-xs text-[#b0baca]">Secure payment via Stripe · Cancel anytime</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── PRO GATE COMPONENT ───────────────────────────────────────
 function ProGate({ title, description, features, onUpgrade }) {
   return (
@@ -1661,8 +1725,13 @@ export default function Dashboard({ darkMode, setDarkMode }) {
   const [user, setUser] = useState(null);
   const [isPro, setIsPro] = useState(IS_PRO_DEV_OVERRIDE);
   const IS_PRO = isPro;
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
 
-  async function handleUpgrade(plan = "monthly") {
+  function handleUpgrade() {
+    setShowUpgradeModal(true);
+  }
+
+  async function handleCheckout(plan = "monthly") {
     const priceId = plan === "annual"
       ? "price_1TAJkFRuW7dqm2w8RHv1uKbt"
       : "price_1TAJjYRuW7dqm2w86opu3EWq";
@@ -1678,6 +1747,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
       const data = await res.json();
       if (data.url) {
         newTab.location.href = data.url;
+        setShowUpgradeModal(false);
       } else {
         newTab.close();
         alert("Checkout error: " + (data.error || "No URL returned"));
@@ -2216,6 +2286,7 @@ export default function Dashboard({ darkMode, setDarkMode }) {
         </div>
       )}
       {showAuth  && <AuthModal onClose={() => setShowAuth(false)} onAuth={setUser} />}
+      {showUpgradeModal && <UpgradeModal onClose={() => setShowUpgradeModal(false)} onUpgrade={handleCheckout} />}
       {showProfile && user && <ProfilePanel user={user} songs={songs} onClose={() => setShowProfile(false)} onAvatarChange={setNavAvatarUrl} onOpenSettings={() => { setShowProfile(false); setShowSettings(true); }} />}
       {showSettings && user && <SettingsModal user={user} onClose={() => setShowSettings(false)} onSaved={(p) => {
         setUser(prev => ({ ...prev, user_metadata: { ...prev?.user_metadata, username: p.username } }));
