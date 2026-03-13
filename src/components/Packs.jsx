@@ -1,5 +1,6 @@
 // src/components/Packs.jsx
 import { useState, useEffect, useRef } from "react";
+import { supabase } from "../supabase";
 
 // ?? ALBUM ART CACHE + HOOK ???????????????????????????????????
 const artCache = {};
@@ -904,6 +905,17 @@ export default function Packs({ songs, onAddSong, isPro = false }) {
   const [filter, setFilter] = useState("all");
   const [openPack, setOpenPack] = useState(null);
   const [startedPacks, setStartedPacks] = useState(new Set());
+  const [dbPacks, setDbPacks] = useState(null); // null = not loaded yet
+
+  useEffect(() => {
+    supabase.from("packs").select("*").order("sort_order")
+      .then(({ data }) => {
+        if (data && data.length > 0) setDbPacks(data);
+        else setDbPacks([]); // empty = use hardcoded
+      });
+  }, []);
+
+  const PACKS = dbPacks && dbPacks.length > 0 ? dbPacks : ALL_PACKS;
 
   const libraryTitles = new Set(songs.map(s => s.title));
 
@@ -943,9 +955,9 @@ export default function Packs({ songs, onAddSong, isPro = false }) {
     { id: "technique",  label: "By Technique" },
   ];
 
-  const myPacks = ALL_PACKS.filter(p => startedPacks.has(p.id) || getCompletedSongs(p).size > 0);
-  const browsePacks = ALL_PACKS.filter(p => filter === "all" || p.type === filter);
-  const proCount = ALL_PACKS.filter(p => p.pro).length;
+  const myPacks = PACKS.filter(p => startedPacks.has(p.id) || getCompletedSongs(p).size > 0);
+  const browsePacks = PACKS.filter(p => filter === "all" || p.type === filter);
+  const proCount = PACKS.filter(p => p.pro).length;
 
   return (
     <div>
