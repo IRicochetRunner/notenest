@@ -1664,8 +1664,8 @@ export default function Dashboard({ darkMode, setDarkMode }) {
 
   async function handleUpgrade(plan = "monthly") {
     const priceId = plan === "annual"
-      ? "price_1TA28sRvo6SdBTINe0u6jkdx"
-      : "price_1TA289Rvo6SdBTINrbtmTyS7";
+      ? "price_1TAJkFRuW7dqm2w8RHv1uKbt"
+      : "price_1TAJjYRuW7dqm2w86opu3EWq";
 
     const newTab = window.open("", "_blank");
 
